@@ -4,13 +4,23 @@
 #include <ctime>
 #include <cstdlib>
 #include <algorithm>
-#include "json.h"
+#include <fstream>
+#include <windows.h>
+#include <cstring>
+#include <assert.h>
+#include <cmath>
+#include "jsoncpp/json.h"
+
 
 using namespace std;
 namespace doudizhu{
-    // 游戏使用的牌总数，不要修改
-    const int MAX_CARD_NUM = 54;
 
+    // 所有的牌，在发牌时使用
+    int all_cards[30]={24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53};
+    const char card_name[] = {'3','3','3','3','4','4','4','4','5','5','5','5','6','6','6','6','7','7','7','7','8','8','8','8','9','9','9','9','T','T','T','T','J','J','J','J','Q','Q','Q','Q','K','K','K','K','A','A','A','A','2','2','2','2','w','W'};
+
+    // 游戏使用的牌总数，不要修改
+    const int MAX_CARD_NUM = 54;    
     // 游戏使用的牌类型的数目，不要修改
     const int MAX_CARD_TYPE_NUM = 15;
 
@@ -25,6 +35,9 @@ namespace doudizhu{
     // 牌张按照3-JOKER的顺序从0-53编号
     typedef int Card;
 
+    // // botzone()函数的工作模式
+    // typedef int Workmode;
+
     // 定义牌张类型：一共15种不同大小的牌
     typedef enum{
         THREE = 0, FOUR = 1, FIVE = 2, SIX = 3, 
@@ -33,8 +46,24 @@ namespace doudizhu{
         TWO = 12, Joker = 13, JOKER = 14
     } CardType;
 
+    //定义botzone()函数中的模式
+    typedef enum {
+        RANDON = 0, WORK = 1
+    } WorkMode;
+
+    typedef enum {
+        WIN = 1, LOSE = 0
+    } GameResult;
+
     // 游戏中最小的牌张类型（可修改为NINE，适配迷你斗地主）
     const CardType START_CARD = NINE;
+
+    //user 取值为0，1，2
+    typedef enum{
+        USER0 = 0,
+        USER1 = 1,
+        USER2 = 2
+    } User;
 
     // 主牌类型
     // 对于连牌 (456789:SINGLE; 334455:PAIR; JJJQQQ:TRIPLET, 77778888:QUADRUPLE)
@@ -57,6 +86,22 @@ namespace doudizhu{
         return CardType((c >> 2) + int(bool(c & 1) && (c >= MAX_CARD_NUM-2)));
     }
 
+    // 将牌的数目向量转为牌张序列序列
+    vector<Card> toCardnumVector(const vector<int>& card_count) {
+        vector<Card> card_list(MAX_CARD_NUM);
+        for (int type=6; type<=12; type++) {
+            Card end = 4*(type+1);
+            int num = card_count[type];
+            while (end--) {
+                if (num==0) break;
+                card_list[end] = 1;
+                num--;
+            }
+        }
+        card_list[52] = card_count[Joker];
+        card_list[53] = card_count[JOKER];
+        return card_list;
+    }
     // 将牌张序列转为各种牌的数目向量
     vector<int> toCardCountVector(const vector<Card>& card_combo){
         vector<int> card_counter(MAX_CARD_TYPE_NUM);
@@ -75,6 +120,21 @@ namespace doudizhu{
         }
         return combo;
     }
+    
+    // 在EncodedCards中判断某种牌有多少张
+    inline int numCardOfEncoded(
+        CardType ct, EncodedCards combo){
+        return int((combo >> (ct << 2)) & 0xfull);
+    }
+
+    // 将encodedcards转化为数目向量格式
+    vector<int> toDecodeCards(const EncodedCards combo) {
+        vector<int> card_vector(MAX_CARD_TYPE_NUM);
+        for (CardType type=NINE;type<=JOKER;type = CardType(type+1)) {
+            card_vector[type] = numCardOfEncoded(type, combo);
+        }
+        return card_vector;
+    }
 
     // 在EncodedCards combo中将CardType ct类型的牌的数目增加n
     inline EncodedCards addToEncodedCards(
@@ -88,11 +148,7 @@ namespace doudizhu{
         return combo - (EncodedCards(n) << (ct << 2));
     }
     
-    // 在EncodedCards中判断某种牌有多少张
-    inline int numCardOfEncoded(
-        CardType ct, EncodedCards combo){
-        return int((combo >> (ct << 2)) & 0xfull);
-    }
+
 
     // 分析一手牌的类型、大小等
     struct Hand{
@@ -166,6 +222,7 @@ namespace doudizhu{
             // 副牌带0,1,2张
             appendix = total_cards / length - int(type);   //TODO: why???
         }
+        Hand() {type = PASS;}
         bool isPass(){
             return type == PASS;
         }
@@ -202,7 +259,9 @@ namespace doudizhu{
     };
 
     // 使用上一手牌、我方现有的牌，构造游戏状态。可分析我方可行动作
-    struct DoudizhuState{
+    struct State{ //TODO: 或需要考虑加快数据传输速度，以编码格式传输
+        // TODO: 增加改变state的函数
+
         // 轮到我出的时候，我有什么牌
         vector<Card> my_cards;
         // 我各种牌都有多少张
@@ -211,10 +270,23 @@ namespace doudizhu{
         Hand last_action;
 
         // 传入我有的牌、对手上一次出的牌（0-53）编码
-        DoudizhuState(vector<Card> mine, const vector<Card>& last): 
+        State(vector<Card> mine, const vector<Card>& last): 
             my_cards(mine), 
             my_card_counter(toCardCountVector(mine)),
             last_action(toCardCountVector(last)){}
+
+        State(vector<Card> mine): 
+            my_cards(mine), 
+            my_card_counter(toCardCountVector(mine)){}  
+
+        // State(EncodedCards mine, const EncodedCards last=0ull):
+        //     my_cards(toCardnumVector(toDecodeCards(mine))),
+        //     my_card_counter(toDecodeCards(mine)),
+        //     last_action(toDecodeCards(last)){}
+
+        // // 在单独修改了mine后，通过这个函数更新my_card_counter
+        void refresh() { my_card_counter=toCardCountVector(my_cards); }
+
 
         // 我的牌中是否有火箭，如果有，则返回该牌型的EncodedCards表示
         EncodedCards genRocket(){
@@ -518,8 +590,9 @@ namespace doudizhu{
             return appendixes;
         }
 
+        
         // 对validAction生成的可能动作，解析出实际要出的牌张
-        vector<Card> decodeAction(EncodedCards encoded_action){
+        vector<Card> decodeAction(EncodedCards encoded_action,int ins){
             vector<Card> action;
             CardType ct;
             int encoded_ct_num;
@@ -535,5 +608,27 @@ namespace doudizhu{
             }
             return action;
         }
+
+        // 对validAction生成的可能动作，解析出实际要出的牌张
+        // 同时去除自己的手牌中要出的牌
+        vector<Card> decodeAction(EncodedCards encoded_action){
+            vector<Card> action,cards1;
+            CardType ct;
+            int encoded_ct_num;
+            // 对每一张我有的牌，看看我打算打出去的动作中需不需要这张牌
+            for (vector<Card>::iterator c = my_cards.begin(); c!=my_cards.end(); ++c) {
+                ct = cardTypeOf(*c);
+                encoded_ct_num = numCardOfEncoded(ct, encoded_action);
+                if (encoded_ct_num > 0) {
+                    encoded_action = minusFromEncodedCards(ct, encoded_action, 1);
+                    action.push_back(*c);
+                } else cards1.push_back(*c);
+            }
+            my_cards = cards1;
+            refresh();
+            return action;
+        }
     };
+
+
 }

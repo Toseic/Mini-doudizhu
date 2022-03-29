@@ -5,3 +5,7 @@
 /ignore/
 /.vscode/
 *.pdf*
+*json*
+*.png
+*.jpg
+*.ini
