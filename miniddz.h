@@ -9,12 +9,28 @@
 #include <cstring>
 #include <assert.h>
 #include <cmath>
+#include <unordered_map>
 #include "jsoncpp/json.h"
 
 
 using namespace std;
 namespace doudizhu{
+    LARGE_INTEGER seed;
+    inline int rand_int(int max) {
+        QueryPerformanceFrequency(&seed);
+        QueryPerformanceCounter(&seed);
+        srand(seed.QuadPart);
+        return (int)rand()%(long long)max;
+    }
 
+    // bitmap，用于枚举子集
+    typedef unsigned long long Bitmap;
+    typedef unsigned long long ull;
+    typedef unsigned long long Hash;
+    const Bitmap EMPTY_SET = 0ull;
+
+
+    uint64_t myHash[64][3] = {16668552215174154829, 15684088468973760346, 14458935525009338918, 17069087732856008244, 4665249168328654237, 2506651028494935006, 4142044020440757338, 1838224231312793316, 407446862418391519, 12651567891252036807, 12065738086055235367, 17863737910281200644, 14818848823590580721, 2449328130808507269, 3703610699633700225, 1247449263731090769, 18415012460386301039, 10440343481692447988, 6575942454424886470, 7079388388391540156, 1056903953815343530, 1302778975914571106, 8568378854837631303, 8061970819115803990, 14325212211899040538, 6039537587684889327, 8634611165135681786, 2373693396233091769, 6762593013204091542, 3239491292076930509, 7851954291664117057, 6603879558530891700, 18097968031487201671, 6237602200615785004, 6938166570731171152, 10839878235714550601, 12558588575245590780, 9786719252293315549, 14478642443199040409, 18318865194440743847, 2188075877604972879, 13853404042204719420, 15790617741847716028, 13169103606201132884, 7237405842780369298, 7319255577297890057, 14596021816324768057, 3118979015609147186, 14964815200706063351, 396921024258579884, 2784098543079198318, 13296736921928741747, 1534159419210227095, 7210014343715497891, 5991736446831530586, 930875805330555743, 9553559469292047716, 3148300683452202202, 9343209496481317499, 15107591555134261881, 12181804936447203596, 13210087611768757141, 6719066631683055734, 3325834051997066068, 6391080986949358585, 3730782868825969264, 17610115084337192332, 2147649610319799244, 543740767602230636, 15812277687345229439, 7307517328862940893, 14523330419253597995, 10034960855476612066, 2604432104628846312, 13232655076468385361, 2989775395494227098, 6841544787939108138, 17306053772534944427, 4839212232905313649, 17649931098039478771, 4755815132978931169, 10990491964609973746, 10257606170776784773, 12450307457559505408, 7462781503201666376, 6254484232527537735, 17802935049721257336, 5765981541309584671, 13819469070950802349, 12964283009726431281, 6364857706746111599, 9122691174139123072, 11826040702937168613, 5579891280180689308, 978139813813459485, 3414956089563965541, 14252933494671180514, 8987413421681391908, 6937048715218753305, 9470313117237644623, 4117480305406080765, 10387439639194965371, 1613004714374024769, 11572702902014344759, 6925818282466670550, 11350684147439743729, 13582731901001220562, 7096229272808839574, 11656602685177029023, 12035177389252383273, 9601544388911144461, 10168261857442669966, 1826722813000732362, 18126645333604486346, 4291537724591403329, 17406284394822311124, 14982781505061244384, 2531783010219297890, 8827857058156438233, 134902996294667272, 6401569462100436384, 2177462498408934342, 9633905724068725921, 8333086144174031401, 3225494044143205884, 9799683909359747457, 5156793947141607110, 5765849991854444689, 15223857081901539984, 12410231686593393582, 15590102858949883800, 17174959797926922664, 787058988844657537, 2685506887356308045, 14676255597535192704, 6647175297046901846, 6919052294627046984, 13793245618590807689, 1145879464798453614, 11804454393526935237, 1495015275024927761, 10764473511429947328, 13206476334160523820, 13162668047424105333, 14535206418010801661, 15654880054427191241, 10141424475846849666, 11140920606112196563, 11431128457954766101, 7867330980549331256, 1922837694387100693, 11416179472953463490, 12401513342097832696, 13218371223108052012, 4000949356437243011, 7884158610990408253, 10707286997474214536, 7756363583350225618, 3310450739409847266, 3345053689537336103, 2309171409701299267, 13135666138001156036, 12463842187737695209, 16464897576421676144, 7995630649052900248, 4454930779258814632, 10610981062443131921, 6920552190775002977, 578760989450696976, 15925583449999100184, 95889443336856401, 17037024464907497596, 3860267974905203268, 7516036215066551880, 4277058413668603281, 9786670671884617487, 3437603049371422301, 13895326348634672006, 7724158672266640722, 6734435917875600107, 4591755121552383383, 7039133793920971384, 18430580342807362499, 16192480689637956038, 12598719717892771667, 1665625432242099795, 17091277853226821782, 7927492083339397439, 13107747356566013913, 3821972150321199266, 9537590639044331541, 17436595555697649537};
     // 所有的牌，在发牌时使用
     int all_cards[30]={24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53};
     const char card_name[] = {'3','3','3','3','4','4','4','4','5','5','5','5','6','6','6','6','7','7','7','7','8','8','8','8','9','9','9','9','T','T','T','T','J','J','J','J','Q','Q','Q','Q','K','K','K','K','A','A','A','A','2','2','2','2','w','W'};
@@ -28,9 +44,7 @@ namespace doudizhu{
     typedef unsigned long long EncodedCards;
     const EncodedCards NO_CARDS = 0ull;
 
-    // bitmap，用于枚举子集
-    typedef unsigned long long Bitmap;
-    const Bitmap EMPTY_SET = 0ull;
+
 
     // 牌张按照3-JOKER的顺序从0-53编号
     typedef int Card;
@@ -46,7 +60,7 @@ namespace doudizhu{
         TWO = 12, Joker = 13, JOKER = 14
     } CardType;
 
-    //定义botzone()函数中的模式
+    //定义botzone()函数中的模式，暂时废弃
     typedef enum {
         RANDON = 0, WORK = 1
     } WorkMode;
@@ -62,8 +76,12 @@ namespace doudizhu{
     typedef enum{
         USER0 = 0,
         USER1 = 1,
-        USER2 = 2
+        USER2 = 2,
+        LORD = 0,
     } User;
+
+    User next(User user) {if (user==USER2) return USER0; return User(user+1);}
+    User last(User user) {if (user==USER0) return USER2; return User(user-1);}
 
     // 主牌类型
     // 对于连牌 (456789:SINGLE; 334455:PAIR; JJJQQQ:TRIPLET, 77778888:QUADRUPLE)
@@ -150,7 +168,7 @@ namespace doudizhu{
     
 
 
-    // 分析一手牌的类型、大小等
+    // 分析一次出的牌中牌的类型、大小等
     struct Hand{
         // 一手牌的编码形式，每4位对应一种牌的数目。
         EncodedCards combo;
@@ -223,6 +241,9 @@ namespace doudizhu{
             appendix = total_cards / length - int(type);   //TODO: why???
         }
         Hand() {type = PASS;}
+        bool operator==(const Hand & hand1) {
+            return (combo==hand1.combo);
+        }
         bool isPass(){
             return type == PASS;
         }
@@ -260,12 +281,13 @@ namespace doudizhu{
 
     // 使用上一手牌、我方现有的牌，构造游戏状态。可分析我方可行动作
     struct State{ //TODO: 或需要考虑加快数据传输速度，以编码格式传输
-        // TODO: 增加改变state的函数
 
         // 轮到我出的时候，我有什么牌
         vector<Card> my_cards;
         // 我各种牌都有多少张
         vector<int> my_card_counter;
+        // 以编码格式储存my_card_counter
+        EncodedCards my_cards_coded;
         // 上一手出了什么牌
         Hand last_action;
 
@@ -273,11 +295,14 @@ namespace doudizhu{
         State(vector<Card> mine, const vector<Card>& last): 
             my_cards(mine), 
             my_card_counter(toCardCountVector(mine)),
-            last_action(toCardCountVector(last)){}
+            last_action(toCardCountVector(last)),
+            my_cards_coded(toEncodedCards(my_card_counter)){}
 
         State(vector<Card> mine): 
             my_cards(mine), 
-            my_card_counter(toCardCountVector(mine)){}  
+            my_card_counter(toCardCountVector(mine)),
+            my_cards_coded(toEncodedCards(my_card_counter)){}  
+        State() {}
 
         // State(EncodedCards mine, const EncodedCards last=0ull):
         //     my_cards(toCardnumVector(toDecodeCards(mine))),
@@ -591,8 +616,8 @@ namespace doudizhu{
         }
 
         
-        // 对validAction生成的可能动作，解析出实际要出的牌张
-        vector<Card> decodeAction(EncodedCards encoded_action,int ins){
+        // 对validAction生成的可能动作，解析出实际要出的牌张,并不修改拥有的牌的内容
+        vector<Card> decodeAction__(EncodedCards encoded_action,int ins){
             vector<Card> action;
             CardType ct;
             int encoded_ct_num;
@@ -628,7 +653,53 @@ namespace doudizhu{
             refresh();
             return action;
         }
+
+        // 根据action将拥有的牌修改
+        void removeFromAction(EncodedCards encoded_action) {
+            vector<Card> cards1;
+            CardType ct;
+            int encoded_ct_num;
+            // 对每一张我有的牌，看看我打算打出去的动作中需不需要这张牌
+            for (vector<Card>::iterator c = my_cards.begin(); c!=my_cards.end(); ++c) {
+                ct = cardTypeOf(*c);
+                encoded_ct_num = numCardOfEncoded(ct, encoded_action);
+                if (encoded_ct_num > 0) {
+                    encoded_action = minusFromEncodedCards(ct, encoded_action, 1);
+                } else cards1.push_back(*c);
+            }
+            my_cards = cards1;
+            refresh();
+        }
     };
 
+    // 比赛过程中的一个节点，包含三方的牌的内容（未知的两方由card_guess模块给出）
+    // 以及当前要出牌的user
+    struct Node {
+        State states[3];
+        User user;
+        Hash hash,parent,children[50];
+        int childNum;
+        double visit,reward; // TODO: 加上人工辅助判断
+        bool isexpand, isroot;
+        EncodedCards from_action;
+        Node() {}
+        Node(State state0, State state1, State state2, User user_)
+            :user(user_) {
+            states[0] = state0; states[1] = state1; states[2] = state2;
+            childNum = 0; visit = 0; reward = 0; isexpand = false; isroot = false;
+            nodehash();
+        }
+        
+
+        void nodehash() {
+            hash = myHash[rand_int(64)][user] ^ states[0].my_cards_coded ^
+            states[1].my_cards_coded ^ states[2].my_cards_coded; }
+
+        void expand();
+        double eval();
+        inline double evalnum();
+        Node newChild(EncodedCards encode_action);
+            
+    };
 
 }
