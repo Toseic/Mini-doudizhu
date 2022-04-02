@@ -31,11 +31,12 @@ typedef unsigned long long Hash;
 typedef unsigned long long cards;
 
 typedef enum {
+    FAKECARD = -1,
     NINE = 0, TEN = 1,
     JACK = 2, QUEEN = 3,
     KING = 4, ACE = 5,
     TWO = 6, Joker = 7, 
-    JOKER = 8, UNKNOWNCARD = -1,
+    JOKER = 8, UNKNOWNCARD = -2,
 } Cardtype;
 
 typedef enum {
@@ -176,6 +177,20 @@ const cards Pairs[7] = {
     0x002000000ull, // 2* 2
 };
 
+const int Single_num = 9;
+const cards Single[9] = {
+    0x000000001ull, // 2* 9
+    0x000000010ull, // 2* 10
+    0x000000100ull, // 2* J
+    0x000001000ull, // 2* Q
+    0x000010000ull, // 2* K
+    0x000100000ull, // 2* A
+    0x001000000ull, // 2* 2
+    0x010000000ull, // 2* w
+    0x100000000ull, // 2* W
+
+};
+
 const int Plane_2_num = 5;
 const cards Plane_2[5]={
     0x000000033ull, // 3*(9~10) 
@@ -297,6 +312,8 @@ struct Hand {
     Cardtype mainCard;
     Hand(cards act, Handtype mytype):
         action(act),type(mytype),append_type(NONE),mainCard(UNKNOWNCARD) {} 
+    Hand(cards act, Handtype mytype, Cardtype mc):
+        action(act),type(mytype),append_type(NONE),mainCard(mc) {}
     Hand():action(EMPTY_CARDS),type(UNKNOWN),mainCard(UNKNOWNCARD) {}
     Hand(cards action_): action(action_),type(UNKNOWN),mainCard(UNKNOWNCARD) {}
     Hand(vector<int>& card_vector): action(Cards::encode(card_vector)),
@@ -318,7 +335,84 @@ struct State {
     State(Cards card0, User user_):
         cards(card0), user(user_) {}
     State(User user_): user(user_) {}
+    void anti_action(vector<Hand>& );
+    void find_rocket(vector<Hand>& vh) {
+        if (cards.mycards & Rocket) 
+            vh.push_back(Hand(Rocket,ROCKET,JOKER));
+    }
+    void find_bomb(vector<Hand>& vh, Cardtype minline = FAKECARD) {
+        for (Cardtype i = Cardtype(minline+1); i<=TWO; i=Cardtype(i+1)) {
+            if ((cards.mycards & Bombs[i]) == Bombs[i]) 
+                vh.push_back(Hand(Bombs[i],BOMB,i));
+        }
+    }
 
+    void find_single(vector<Hand>& vh, Cardtype minline = FAKECARD) {
+        for (Cardtype i = Cardtype(minline+1); i<=JOKER; i=Cardtype(i+1)) {
+            if ((cards.mycards & (FULL_MASK<<i*4)) >= (ONE_MASK<<i*4) )
+                vh.push_back(Hand(Single[i],SINGLE,i));
+        }
+    }
+
+    void find_pair(vector<Hand>& vh, Cardtype minline = FAKECARD) {
+        for (Cardtype i = Cardtype(minline+1); i<=TWO; i=Cardtype(i+1)) {
+            if ((cards.mycards & (FULL_MASK<<i*4)) >= (TWO_MASK<<i*4))
+                vh.push_back(Hand(Pairs[i],PAIR,i));
+        }
+    }
+
+    void find_three_cards(vector<Hand>& vh, Cardtype minline = FAKECARD) {
+        for (Cardtype i = Cardtype(minline+1); i<=TWO; i=Cardtype(i+1)) {
+            if ((cards.mycards & (FULL_MASK<<i*4)) >= (THREE_MASK<<i*4))
+                vh.push_back(Hand(threeCards[i],THREECARDS,i));
+        }
+    }
+    void find_line_1_5(vector<Hand>& vh, Cardtype minline = FAKECARD) {
+        if (minline == KING &&
+            (cards.has(Line_1_5[1])))
+                vh.push_back(Hand(Line_1_5[1],LINE_1_5,ACE));
+    }
+    void find_line_2_3(vector<Hand>& vh, Cardtype minline = FAKECARD) {
+        for (Cardtype i = Cardtype(minline+1); i<=ACE; i=Cardtype(i+1)) {
+            if (cards.has(Line_2_3[i-2])) {
+                vh.push_back(Hand(Line_2_3[i-2],LINE_2_3,i));
+            }
+        }
+    }
+
+    void find_line_2_4(vector<Hand>& vh, Cardtype minline = FAKECARD) {
+        for (Cardtype i = Cardtype(minline+1); i<=ACE; i=Cardtype(i+1)) {
+            if ((cards.has(Line_2_4[i-3]))) {
+                vh.push_back(Hand(Line_2_4[i-3],LINE_2_4,i));
+            }
+        }
+    }
+    void find_line_2_5(vector<Hand>& vh, Cardtype minline = FAKECARD) {
+        if (minline == KING &&
+            (cards.has(Line_2_5[1])))
+                vh.push_back(Hand(Line_2_5[1],LINE_2_5,ACE));
+    }
+    void find_plane_2(vector<Hand>& vh, Cardtype minline = FAKECARD) {
+        for (Cardtype i = Cardtype(minline+1); i<=ACE; i=Cardtype(i+1)) {
+            if ((cards.has(Plane_2[i-1]))) {
+                vh.push_back(Hand(Plane_2[i-1],PLANE_2,i));
+            }
+        } 
+    }
+    void find_plane_3(vector<Hand>& vh, Cardtype minline = FAKECARD) {
+        for (Cardtype i = Cardtype(minline+1); i<=ACE; i=Cardtype(i+1)) {
+            if ((cards.has(Plane_3[i-2]))) {
+                vh.push_back(Hand(Plane_3[i-2],PLANE_3,i));
+            }
+        } 
+    }
+    void find_plane_super(vector<Hand>& vh, Cardtype minline = FAKECARD) {
+        for (Cardtype i = Cardtype(minline+1); i<=ACE; i=Cardtype(i+1)) {
+            if ((cards.mycards & Plane_super[i-1]) == Plane_super[i-1]) {
+                vh.push_back(Hand(Plane_super[i-1],PLANE_SUPER,i));
+            }
+        } 
+    }
 };
 
 struct Node {
@@ -369,7 +463,7 @@ void remove(cards mcd, cards cd) {
 inline Cardtype find_1(cards cd) {
     Cardtype ans = UNKNOWNCARD;
     for (Cardtype i = NINE; i<=JOKER; i=Cardtype(i+1)) {
-        if (((cd >> i*4) & ONE_MASK) && !((cd >> i*4) & EXP_ONE_MASK))
+        if (((cd >> i*4) & FULL_MASK) == ONE_MASK)
             ans = i; 
     }
     return ans;
@@ -378,7 +472,7 @@ inline Cardtype find_1(cards cd) {
 inline Cardtype find_2(cards cd) {
     Cardtype ans = UNKNOWNCARD;
     for (Cardtype i = NINE; i<=JOKER; i=Cardtype(i+1)) {
-        if (((cd >> i*4) & TWO_MASK) && !((cd >> i*4) & EXP_TWO_MASK)) 
+        if (((cd >> i*4) & FULL_MASK) == TWO_MASK) 
             ans = i;
     }
     return ans;
@@ -386,8 +480,8 @@ inline Cardtype find_2(cards cd) {
 
 inline Cardtype find_3(cards cd) {
     Cardtype ans = UNKNOWNCARD;
-    for (Cardtype i = NINE; i<=JOKER; i=Cardtype(i+1)) {
-        if (((cd >> i*4) & THREE_MASK) && !((cd >> i*4) & EXP_THREE_MASK)) 
+    for (Cardtype i = NINE; i<=TWO; i=Cardtype(i+1)) {
+        if (((cd >> i*4) & FULL_MASK) == THREE_MASK) 
             ans = i;
     }
     return ans;
@@ -396,7 +490,7 @@ inline Cardtype find_3(cards cd) {
 inline Cardtype find_4(cards cd) {
     Cardtype ans = UNKNOWNCARD;
     for (Cardtype i = NINE; i<=JOKER; i=Cardtype(i+1)) {
-        if (((cd >> i*4) & FOUR_MASK) && !((cd >> i*4) & EXP_FOUR_MASK)) 
+        if (((cd >> i*4) & FULL_MASK) == FOUR_MASK) 
             ans = i;
     }
     return ans;
@@ -588,9 +682,63 @@ void Hand::type_check() {
 
 }
 
+
+// last_action在传入时就应当已经被check过type和maincard了
+// 在这个函数里面仅仅找出所有可以反制对手的牌
+// 副牌在此不考虑，在拆牌后再试着加上
+void State::anti_action(vector<Hand>& actions) {
+    find_rocket(actions);
+    if (last_action.type == ROCKET) return ;
+    else if (last_action.type == BOMB) find_bomb(actions, last_action.mainCard);
+    else {
+        find_bomb(actions);
+        switch (last_action.type) {
+        case SINGLE:
+            find_single(actions, last_action.mainCard);
+            break;
+        case PAIR:
+            find_pair(actions, last_action.mainCard);
+            break;
+        case THREECARDS:
+            find_three_cards(actions, last_action.mainCard);
+            break;
+        case LINE_1_5:
+            find_line_1_5(actions, last_action.mainCard);
+            break;
+        case LINE_2_3:
+            find_line_2_3(actions, last_action.mainCard); 
+            break;
+        case PLANE_2:
+            find_plane_2(actions, last_action.mainCard);           
+            break;
+        case LINE_1_6:
+            break;
+        case LINE_2_4:
+            find_line_2_4(actions, last_action.mainCard);
+            break;
+        case LINE_2_5:
+            find_line_2_5(actions, last_action.mainCard);
+            break;
+        case PLANE_3:
+            find_plane_3(actions, last_action.mainCard);
+            break;
+        case PLANE_SUPER:
+            find_plane_super(actions, last_action.mainCard);
+            break;
+        default:
+            break;
+        }        
+    }
+
+    
+}
+
+
+
 // void allActionCheck(cards cd, vector<cards>& all_actions) {
 // 
 // }
+
 
 
 
