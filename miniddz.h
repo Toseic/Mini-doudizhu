@@ -371,11 +371,12 @@ struct State {
     void anti_action(vector<Hand>& );
     void apart_cards(vector<Hand>& );
     void free_action(vector<Hand>& );
+    void rand_action(vector<Hand>& );
     void member_sum(vector<Hand>& , set<Handtype> * );
-    void make_decision();
+    void make_decision(vector<Hand>&);
 
     void find_rocket(vector<Hand>& vh) {
-        if (cards.mycards & Rocket) 
+        if (cards.mycards & Rocket == ROCKET) 
             vh.push_back(Hand(Rocket,ROCKET,JOKER));
     }
     void find_bomb(vector<Hand>& vh, Cardtype minline = FAKECARD) {
@@ -486,10 +487,10 @@ struct Node {
     // Node(State state0, State state1, State state2, User user_):
     //     states{state0, state1, state2},user(user_) {}
 
-    Node(State state0, State state1, State state2, User user_, TransType type):
+    Node(State state0, State state1, State state2, User user_,cards lord_card_, TransType type):
         states{state0, state1, state2},user(user_),
         isroot(false),isleaf(false),isexpand(false),
-        visit(0), reward(0), fromHand(PASS_HAND) {
+        visit(0), reward(0), fromHand(PASS_HAND), lord_card(lord_card_){
             if (type==BLIND) {
                 states[next(user)].cards.mycards = EMPTY_CARDS;                
                 states[last(user)].cards.mycards = EMPTY_CARDS;                
@@ -500,9 +501,19 @@ struct Node {
         hash = myHash[user] ^ states[0].cards.mycards ^ 
             states[1].cards.mycards ^ states[2].cards.mycards ; 
     }
+    bool isLeaf() {
+        for (int i=0;i<3;i++) {
+            if (states[i].cards.mycards == EMPTY_CARDS) {
+                isleaf = true;
+                return true;
+            }
+        }
+        isleaf = false;
+        return false;
+    }
     double eval();
     double reward_eval();
-    void newchild(Hand hd);
+    Node newchild(Hand hd);
     void expand();
 
 };
@@ -839,6 +850,14 @@ void State::free_action(vector<Hand>& actions) {
 
 }
 
+void State::rand_action(vector<Hand>& actions) {
+    if (last_action == PASS) {
+        free_action(actions);
+    } else {
+        anti_action(actions);
+    }
+}
+
 void State::member_sum(vector<Hand>& actions, set<Handtype> *members ) {
     for (vector<Hand>::iterator i = actions.begin(); i!=actions.end(); i++) {
         if (i->type==SINGLE || i->type == PAIR || i->type == THREECARDS || i->type == BOMB) 
@@ -911,12 +930,12 @@ void State::apart_cards(vector<Hand>& actions_) {
         if (members[i].size()==1) {
             Cards appendact = (1ull << i*4);
             append_single.push_back(Hand(appendact.mycards,WITHSINGLE));
-            focusHand.push_back(Hand(appendact.mycards,SINGLE));
+            focusHand.push_back(Hand(appendact.mycards,SINGLE,i));
         } else if (members[i].size()==2) {
             if (members[i].find(PAIR)!=members[i].end()) {
                 Cards appendact = (2ull << i*4);
                 append_pair.push_back(Hand(appendact.mycards,WITHPAIR));
-                focusHand.push_back(Hand(appendact.mycards,PAIR));
+                focusHand.push_back(Hand(appendact.mycards,PAIR,i));
             }
         }
     }
@@ -946,6 +965,8 @@ void State::apart_cards(vector<Hand>& actions_) {
                         }
                     }
                 }
+            } else {
+                focusHand.push_back(*i);
             }
         }
     }
@@ -970,9 +991,31 @@ void State::apart_cards(vector<Hand>& actions_) {
 }
 
 
+// 逻辑枢纽，牌型反制时的副牌的查找
+void State::make_decision(vector<Hand>& actions) {
+    if (last_action == PASS) {
+        apart_cards(actions);
+    } else {
+        vector<Hand> main_action;
+        anti_action(main_action);
+        // if (last_action.append_type == WITHSINGLE) {
+            
+        // } else if (last_action.append_type == WITHPAIR) {
 
-void State::make_decision() {
-    
+        // } else if (last_action.append_type == WITHTWOSINGLE) {
+
+        // } else if (last_action.append_type == WITHTWOPAIR) {
+
+        // }
+        // if (last_action.type == THREECARDS) {
+        //     if (last_action.append_type == WITHSINGLE) {
+        //         for (vector<Hand>::iterator i=actions.begin();i!=actions.end();i++) {
+        //             // if (i->type == THREECARDS)
+        //         }                
+        //     }
+        // }
+        actions = main_action;
+    }
 }
 
 
@@ -986,4 +1029,31 @@ inline int rand_int(int max) {
     return (int)rand()%(long long)max;
 }
 
+inline void Srand() {
+    QueryPerformanceFrequency(&seed);
+    QueryPerformanceCounter(&seed);
+    srand(seed.QuadPart);   
+}
+
+User rand_game(Node node ) {
+    int actionID;
+    User user = node.user;
+    Srand();
+    while (1) {
+        vector<Hand> actions;
+        if (node.states[user].cards.mycards == EMPTY_CARDS) break;
+        node.states[user].rand_action(actions);
+        Hand thisaction = actions[rand_int(actions.size())];
+        node.states[user].cards.mycards -= thisaction.action;
+        node.states[user].myaction = thisaction;
+        if (thisaction != PASS) node.states[next(user)].last_action = thisaction;
+        else if (node.states[last(user)].myaction==PASS)
+            node.states[next(user)].last_action = PASS_HAND;
+        else node.states[next(user)].last_action = node.states[user].last_action;
+        user = next(user);
+    }
+    return user;
+}
+
 int all_cards[30]={0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6, 6, 7, 8};
+const char card_name[] = {'9','T','J','Q','K','A','2','w','W'};
