@@ -10,6 +10,7 @@
 #include <assert.h>
 #include <cmath>
 #include <unordered_map>
+#include <set>
 #include "jsoncpp/json.h"
 
 using namespace std;
@@ -43,6 +44,7 @@ typedef enum {
     ERRORHAND = 0,
     UNKNOWN = 1,
     PASS = 2,
+
     SINGLE = 3,
     PAIR = 4,
     THREECARDS = 5,
@@ -57,13 +59,19 @@ typedef enum {
     PLANE_2 = 12,
     PLANE_3 = 13,
     PLANE_SUPER = 14,
-    FOURCARDS = 15,
-    BOMB = 16,
-    JUSTfFOUR = 17,
-    ROCKET = 18,
+    BOMB = 15,
+    JUSTfFOUR = 16,
+    ROCKET = 17,
 
 } Handtype;
 
+// 各种handtype的牌张个数
+const int mainCardNum[18] = {
+    0,0,0,
+    1,2,3,5,6,
+    6,8,10,12,
+    6,9,8,4,4,2
+};
 
 typedef enum {
     NONE = 0,
@@ -73,12 +81,15 @@ typedef enum {
     WITHTWOPAIR = 4
 } Appendtype;
 
+//各种appendtype的牌张个数
+const int appendCardNum[5] = {0,1,2,2,4};
+
 typedef enum {
     USER0 = 0,
     USER1 = 1,
     USER2 = 2,
     LORD = 0,
-
+    FARMER,
 } User;
 
 typedef enum {
@@ -225,7 +236,7 @@ struct Cards {
         mycards(encode(cards_vector)) {}
     
     bool has(cards cd) {
-        for (int i=0;i<CARD_TYPES;i++) {
+        for (int i=0;i<16;i++) {
             if ((mycards<<(i*4)) < (cd<<(i*4))) return false;
         }
         return true;
@@ -310,8 +321,13 @@ struct Hand {
     Handtype type;
     Appendtype append_type;
     Cardtype mainCard;
+    int cards_num;
     Hand(cards act, Handtype mytype):
-        action(act),type(mytype),append_type(NONE),mainCard(UNKNOWNCARD) {} 
+        action(act),type(mytype),append_type(NONE),
+        mainCard(UNKNOWNCARD),cards_num(){} 
+    Hand(cards act,Appendtype mytype):
+        action(act),type(UNKNOWN),append_type(mytype),
+        mainCard(UNKNOWNCARD),cards_num(){} 
     Hand(cards act, Handtype mytype, Cardtype mc):
         action(act),type(mytype),append_type(NONE),mainCard(mc) {}
     Hand():action(EMPTY_CARDS),type(UNKNOWN),mainCard(UNKNOWNCARD) {}
@@ -320,8 +336,24 @@ struct Hand {
         mainCard(UNKNOWNCARD),type(UNKNOWN) {}
 
     void type_check();
+    int cardsum() {
+        cards_num = mainCardNum[type] + appendCardNum[append_type];
+        return cards_num;
+    }
     bool operator==(Handtype hd) { return (type==hd); }
     bool operator!=(Handtype hd) { return (type!=hd); }
+    friend Hand operator+(const Hand& h1,const Hand& h2) {
+        Hand h3;
+        h3.action = h1.action + h2.action;
+        h3.type_check();
+        return h3;
+    }
+    friend Hand operator+(const Hand& h1,const cards& h2) {
+        Hand h3;
+        h3.action = h1.action + h2;
+        h3.type_check();
+        return h3;
+    }
 };
 
 const Hand PASS_HAND(EMPTY_CARDS,PASS);
@@ -337,10 +369,10 @@ struct State {
     State(User user_): user(user_) {}
 
     void anti_action(vector<Hand>& );
-    void apart_cards(vector<vector<Hand> >);
+    void apart_cards(vector<Hand>& );
     void free_action(vector<Hand>& );
-    void member_sum(vector<Hand>& , vector<Handtype> * );
-
+    void member_sum(vector<Hand>& , set<Handtype> * );
+    void make_decision();
 
     void find_rocket(vector<Hand>& vh) {
         if (cards.mycards & Rocket) 
@@ -414,7 +446,7 @@ struct State {
             if ((cards.has(Plane_2[i]))) {
                 vh.push_back(Hand(Plane_2[i],PLANE_2,Cardtype(i+1)));
             }
-        } 
+        }
     }
     void find_plane_3(vector<Hand>& vh, Cardtype minline = FAKECARD) {
         for (Cardtype i = Cardtype(minline+1); i<=ACE-2; i=Cardtype(i+1)) {
@@ -434,27 +466,44 @@ struct State {
 
 struct Node {
     State states[3];
+    cards lord_card;
     User user;
     Hash hash;
     Hash parent,children[50];
+    Hand fromHand;
+    bool isroot, isleaf, isexpand;
     int childNum;
-    Node():states{USER0, USER1, USER2} {}
-    Node(User user_):states{USER0, USER1, USER2},user(user_) {}
+    double visit,reward;
+
+    Node():states{USER0, USER1, USER2},
+        isroot(false), isleaf(false), visit(0), 
+        reward(0), fromHand(PASS_HAND){}
+
+    Node(User user_):states{USER0, USER1, USER2}, user(user_), 
+        isroot(false), isleaf(false), isexpand(false),
+        visit(0), reward(0), fromHand(PASS_HAND){}
+
     // Node(State state0, State state1, State state2, User user_):
     //     states{state0, state1, state2},user(user_) {}
+
     Node(State state0, State state1, State state2, User user_, TransType type):
-        states{state0, state1, state2},user(user_) {
+        states{state0, state1, state2},user(user_),
+        isroot(false),isleaf(false),isexpand(false),
+        visit(0), reward(0), fromHand(PASS_HAND) {
             if (type==BLIND) {
                 states[next(user)].cards.mycards = EMPTY_CARDS;                
                 states[last(user)].cards.mycards = EMPTY_CARDS;                
             }
         }
+
     void nodehash() {
         hash = myHash[user] ^ states[0].cards.mycards ^ 
             states[1].cards.mycards ^ states[2].cards.mycards ; 
     }
     double eval();
+    double reward_eval();
     void newchild(Hand hd);
+    void expand();
 
 };
 
@@ -527,16 +576,23 @@ void Hand::type_check() {
         mainCard = find_1(action);
         break;
     case 2:
-        if (card_type_num == 2) {
-            type = ROCKET;
-            append_type = NONE;
-            mainCard = JOKER;
+        if (card_type_num == 2 ) {
+            if (action & Rocket == Rocket) {
+                type = ROCKET;
+                append_type = NONE;
+                mainCard = JOKER;     
+                break;           
+            } else {
+                append_type = WITHTWOSINGLE;
+                break;
+            }
         } else {
             type = PAIR;
             append_type = NONE;
             mainCard = find_2(action);
+            break;
         }
-        break;
+        
     case 3:
         type = THREECARDS;
         append_type = NONE;
@@ -655,6 +711,7 @@ void Hand::type_check() {
         type = PLANE_3;
         append_type = NONE;
         mainCard = find_3(action);
+        break;
     case 10:
     // 航天飞机带小翼 || 五连对 || 飞机带大翼
         if (card_type_num == 4) {
@@ -702,11 +759,13 @@ void Hand::type_check() {
 
 // last_action在传入时就应当已经被check过type和maincard了
 // 在这个函数里面仅仅找出所有可以反制对手的牌
-// 副牌在此不考虑，在拆牌后再试着加上
+// 副牌在此不考虑，在拆牌后再加上
 void State::anti_action(vector<Hand>& actions) {
     find_rocket(actions);
+    actions.push_back(PASS_HAND);
     if (last_action.type == ROCKET) return ;
-    else if (last_action.type == BOMB) find_bomb(actions, last_action.mainCard);
+    else if (last_action.type == BOMB || last_action.type == JUSTfFOUR) 
+        find_bomb(actions, last_action.mainCard);
     else {
         find_bomb(actions);
         switch (last_action.type) {
@@ -747,9 +806,14 @@ void State::anti_action(vector<Hand>& actions) {
         }        
     }
 
-    
 }
 
+void actions_type_sum(vector<Hand>& actions, set<Handtype>& action_types) {
+    for (vector<Hand>::iterator i=actions.begin();i!=actions.end();i++) {
+        if (i->type == BOMB) action_types.insert(JUSTfFOUR);
+        action_types.insert(i->type);
+    }
+}
 
 // 列出自由出牌时的所有可出的牌
 void State::free_action(vector<Hand>& actions) {
@@ -775,47 +839,47 @@ void State::free_action(vector<Hand>& actions) {
 
 }
 
-void State::member_sum(vector<Hand>& actions, vector<Handtype> *members ) {
+void State::member_sum(vector<Hand>& actions, set<Handtype> *members ) {
     for (vector<Hand>::iterator i = actions.begin(); i!=actions.end(); i++) {
         if (i->type==SINGLE || i->type == PAIR || i->type == THREECARDS || i->type == BOMB) 
-            members[i->mainCard].push_back(i->type);
+            members[i->mainCard].insert(i->type);
         else {
             switch (i->type) {
                 case LINE_1_5:
                     for (int j=0;j<5;j++) 
-                        members[(i->mainCard)-j].push_back(LINE_1_5);
+                        members[(i->mainCard)-j].insert(LINE_1_5);
                     break;
                 case ROCKET:
-                    members[7].push_back(ROCKET);
-                    members[8].push_back(ROCKET);
+                    members[7].insert(ROCKET);
+                    members[8].insert(ROCKET);
                     break;
                 case LINE_2_3:
                     for (int j=0;j<3;j++) 
-                        members[(i->mainCard)-j].push_back(LINE_2_3);
+                        members[(i->mainCard)-j].insert(LINE_2_3);
                     break;
                 case LINE_1_6:
                     for (int j=0;j<6;++j) 
-                        members[(i->mainCard)-j].push_back(LINE_1_6);
+                        members[(i->mainCard)-j].insert(LINE_1_6);
                     break;   
                 case LINE_2_4:
                     for (int j=0;j<4;++j) 
-                        members[(i->mainCard)-j].push_back(LINE_2_4);
+                        members[(i->mainCard)-j].insert(LINE_2_4);
                     break;     
                 case LINE_2_5:
                     for (int j=0;j<5;++j) 
-                        members[(i->mainCard)-j].push_back(LINE_2_5);
+                        members[(i->mainCard)-j].insert(LINE_2_5);
                     break;  
                 case PLANE_2:
                     for (int j=0;j<2;++j) 
-                        members[(i->mainCard)-j].push_back(PLANE_2);
+                        members[(i->mainCard)-j].insert(PLANE_2);
                     break;  
                 case PLANE_3:
                     for (int j=0;j<3;++j) 
-                        members[(i->mainCard)-j].push_back(PLANE_3);
+                        members[(i->mainCard)-j].insert(PLANE_3);
                     break;    
                 case PLANE_SUPER:
                     for (int j=0;j<2;++j) 
-                        members[(i->mainCard)-j].push_back(PLANE_SUPER);
+                        members[(i->mainCard)-j].insert(PLANE_SUPER);
                     break;                         
                 default:
                     break;
@@ -825,42 +889,101 @@ void State::member_sum(vector<Hand>& actions, vector<Handtype> *members ) {
 }
 
 
-void State::apart_cards(vector<vector<Hand> >) {
-    // vector<Handtype> members[9];
-    // if (last_action != PASS) {
 
-    // }
+// 仅当可以自由出牌时才会使用，通过拆牌减少无效搜索
+// 找出有搜索价值的主牌
+// 包括大牌，散牌
+// 大牌为了使得下两家接不住，散牌为了方便把散牌打掉
+void State::apart_cards(vector<Hand>& actions_) {
+    Cards mycard_cp = cards.mycards;
+    vector<Hand> focusHand;
+    set<Handtype> members[9];
+    vector<Hand> actions;
+    // set<Handtype> all_action_types;
+    vector<Hand> append_single;
+    vector<Hand> append_pair;
+    free_action(actions);
+    member_sum(actions, members);
+    
+
+
+    for (Cardtype i = NINE; i<=JOKER; i=Cardtype(i+1)) {
+        if (members[i].size()==1) {
+            Cards appendact = (1ull << i*4);
+            append_single.push_back(Hand(appendact.mycards,WITHSINGLE));
+            focusHand.push_back(Hand(appendact.mycards,SINGLE));
+        } else if (members[i].size()==2) {
+            if (members[i].find(PAIR)!=members[i].end()) {
+                Cards appendact = (2ull << i*4);
+                append_pair.push_back(Hand(appendact.mycards,WITHPAIR));
+                focusHand.push_back(Hand(appendact.mycards,PAIR));
+            }
+        }
+    }
+
+    for (vector<Hand>::iterator i=actions.begin();i!=actions.end();i++) {
+        if (
+            i->type!=PASS &&
+            i->type!=SINGLE &&
+            i->type!=PAIR ) {
+            if (i->type == THREECARDS) {
+                if ((cards.mycards & (FULL_MASK << 4*i->mainCard)) 
+                    == FOUR_MASK<<(4*i->mainCard)) continue;
+                focusHand.push_back(*i);
+                for (vector<Hand>::iterator j=append_single.begin();j!=append_single.end();j++) 
+                        focusHand.push_back((*i)+(*j));
+                for (vector<Hand>::iterator j=append_pair.begin();j!=append_pair.end();j++) 
+                        focusHand.push_back((*i)+(*j));                
+            } else if (i->type == BOMB || i->type == JUSTfFOUR) {
+                focusHand.push_back(*i);
+                int pair_num =append_pair.size();
+                if (pair_num==1){
+                    focusHand.push_back((*i)+append_pair[0]);
+                } else {
+                    for (int i1=0;i1<pair_num-1;i1++) {
+                        for (int i2=i1+1;i2<pair_num;i2++) {
+                            focusHand.push_back(((*i)+append_pair[i1])+append_pair[i2]);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    int cards_num_ = cards.cards_sum(cards.mycards);
+    for (vector<Hand>::iterator i=actions.begin();i!=actions.end();i++) {
+        if (i->cardsum() == cards_num_) {
+            actions_.clear();
+            actions_.push_back(*i);
+            return ;
+        }
+    }
+    for (vector<Hand>::iterator i=focusHand.begin();i!=focusHand.end();i++) {
+        if (i->cardsum() == cards_num_) {
+            actions_.clear();
+            actions_.push_back(*i);
+            return ;
+        }
+    }
+    if (focusHand.size()==0) actions_= actions;
+    else actions_ = focusHand;
 }
 
 
 
-// void allActionCheck(cards cd, vector<cards>& all_actions) {
-// 
-// }
+void State::make_decision() {
+    
+}
 
 
 
 
-// vector<vector<cards> > apartCards(cards cd,vector<Hand>& actions) {
-//     cards mcd = cd;
-//     vector<cards> actions;
-//     vector<Hand> all_actions;
-//     for (int i=0;i>Bombs_num;i++) {
-//         if (has(cd, Bombs[i])) {
-//             all_actions.push_back(Hand(Bombs[i],BOMB));
-//         }
-//     }
+LARGE_INTEGER seed;
+inline int rand_int(int max) {
+    QueryPerformanceFrequency(&seed);
+    QueryPerformanceCounter(&seed);
+    srand(seed.QuadPart);
+    return (int)rand()%(long long)max;
+}
 
-//     for (int i=0;i<Line_2_num;i++) {
-//         if (has(cd, Line_2[i])) {
-//             all_actions.push_back(Hand(Line_2[i],LINE_2));
-//         }
-//     }
-//     for (int i=0;i<Line_1_num;i++) {
-//         if (has(cd, Line_1[i])) {
-//             all_actions.push_back(Hand(Line_1[i],LINE_1));
-//         }
-//     }
-
-
-// }
+int all_cards[30]={0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6, 6, 7, 8};
