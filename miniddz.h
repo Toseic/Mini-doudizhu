@@ -335,7 +335,13 @@ struct State {
     State(Cards card0, User user_):
         cards(card0), user(user_) {}
     State(User user_): user(user_) {}
+
     void anti_action(vector<Hand>& );
+    void apart_cards(vector<vector<Hand> >);
+    void free_action(vector<Hand>& );
+    void member_sum(vector<Hand>& , vector<Handtype> * );
+
+
     void find_rocket(vector<Hand>& vh) {
         if (cards.mycards & Rocket) 
             vh.push_back(Hand(Rocket,ROCKET,JOKER));
@@ -368,48 +374,59 @@ struct State {
         }
     }
     void find_line_1_5(vector<Hand>& vh, Cardtype minline = FAKECARD) {
-        if (minline == KING &&
-            (cards.has(Line_1_5[1])))
-                vh.push_back(Hand(Line_1_5[1],LINE_1_5,ACE));
+        for (Cardtype i = Cardtype(minline+1); i<=ACE-4; i=Cardtype(i+1)) {
+            if (cards.has(Line_1_5[i])) {
+                vh.push_back(Hand(Line_1_5[i],LINE_1_5,Cardtype(i+4)));
+            }
+        }
     }
     void find_line_2_3(vector<Hand>& vh, Cardtype minline = FAKECARD) {
-        for (Cardtype i = Cardtype(minline+1); i<=ACE; i=Cardtype(i+1)) {
-            if (cards.has(Line_2_3[i-2])) {
-                vh.push_back(Hand(Line_2_3[i-2],LINE_2_3,i));
+        for (Cardtype i = Cardtype(minline+1); i<=ACE-2; i=Cardtype(i+1)) {
+            if (cards.has(Line_2_3[i])) {
+                vh.push_back(Hand(Line_2_3[i],LINE_2_3,Cardtype(i+2)));
             }
         }
     }
 
     void find_line_2_4(vector<Hand>& vh, Cardtype minline = FAKECARD) {
-        for (Cardtype i = Cardtype(minline+1); i<=ACE; i=Cardtype(i+1)) {
-            if ((cards.has(Line_2_4[i-3]))) {
-                vh.push_back(Hand(Line_2_4[i-3],LINE_2_4,i));
+        for (Cardtype i = Cardtype(minline+1); i<=ACE-3; i=Cardtype(i+1)) {
+            if ((cards.has(Line_2_4[i]))) {
+                vh.push_back(Hand(Line_2_4[i],LINE_2_4,Cardtype(i+3)));
             }
         }
     }
     void find_line_2_5(vector<Hand>& vh, Cardtype minline = FAKECARD) {
-        if (minline == KING &&
-            (cards.has(Line_2_5[1])))
-                vh.push_back(Hand(Line_2_5[1],LINE_2_5,ACE));
+        for (Cardtype i = Cardtype(minline+1); i<=ACE-4; i=Cardtype(i+1)) {
+            if ((cards.has(Line_2_5[i]))) {
+                vh.push_back(Hand(Line_2_5[i],LINE_2_5,Cardtype(i+4)));
+            }
+        }
     }
+
+    void find_line_1_6(vector<Hand>& vh) {
+        if (
+            cards.has(Line_1_6))
+                vh.push_back(Hand(Line_1_6,LINE_1_6,ACE));
+    }
+
     void find_plane_2(vector<Hand>& vh, Cardtype minline = FAKECARD) {
-        for (Cardtype i = Cardtype(minline+1); i<=ACE; i=Cardtype(i+1)) {
-            if ((cards.has(Plane_2[i-1]))) {
-                vh.push_back(Hand(Plane_2[i-1],PLANE_2,i));
+        for (Cardtype i = Cardtype(minline+1); i<=ACE-1; i=Cardtype(i+1)) {
+            if ((cards.has(Plane_2[i]))) {
+                vh.push_back(Hand(Plane_2[i],PLANE_2,Cardtype(i+1)));
             }
         } 
     }
     void find_plane_3(vector<Hand>& vh, Cardtype minline = FAKECARD) {
-        for (Cardtype i = Cardtype(minline+1); i<=ACE; i=Cardtype(i+1)) {
-            if ((cards.has(Plane_3[i-2]))) {
-                vh.push_back(Hand(Plane_3[i-2],PLANE_3,i));
+        for (Cardtype i = Cardtype(minline+1); i<=ACE-2; i=Cardtype(i+1)) {
+            if ((cards.has(Plane_3[i]))) {
+                vh.push_back(Hand(Plane_3[i],PLANE_3,Cardtype(i+2)));
             }
         } 
     }
     void find_plane_super(vector<Hand>& vh, Cardtype minline = FAKECARD) {
-        for (Cardtype i = Cardtype(minline+1); i<=ACE; i=Cardtype(i+1)) {
-            if ((cards.mycards & Plane_super[i-1]) == Plane_super[i-1]) {
-                vh.push_back(Hand(Plane_super[i-1],PLANE_SUPER,i));
+        for (Cardtype i = Cardtype(minline+1); i<=ACE-1; i=Cardtype(i+1)) {
+            if ((cards.mycards & Plane_super[i]) == Plane_super[i]) {
+                vh.push_back(Hand(Plane_super[i],PLANE_SUPER,Cardtype(i+1)));
             }
         } 
     }
@@ -734,6 +751,88 @@ void State::anti_action(vector<Hand>& actions) {
 }
 
 
+// 列出自由出牌时的所有可出的牌
+void State::free_action(vector<Hand>& actions) {
+    int card_num = Cards::cards_sum(cards.mycards);
+    find_rocket(actions);
+    find_bomb(actions);
+    find_line_1_5(actions);
+    find_single(actions);
+    find_pair(actions);
+    find_three_cards(actions);
+
+    if (card_num>=6 ) {
+        find_line_2_3(actions);     
+        find_line_1_6(actions);
+        find_plane_2(actions);
+    } 
+    if (card_num >= 8) {
+        find_plane_super(actions);
+        find_plane_3(actions);
+        find_line_2_5(actions);
+        find_line_2_4(actions);
+    }
+
+}
+
+void State::member_sum(vector<Hand>& actions, vector<Handtype> *members ) {
+    for (vector<Hand>::iterator i = actions.begin(); i!=actions.end(); i++) {
+        if (i->type==SINGLE || i->type == PAIR || i->type == THREECARDS || i->type == BOMB) 
+            members[i->mainCard].push_back(i->type);
+        else {
+            switch (i->type) {
+                case LINE_1_5:
+                    for (int j=0;j<5;j++) 
+                        members[(i->mainCard)-j].push_back(LINE_1_5);
+                    break;
+                case ROCKET:
+                    members[7].push_back(ROCKET);
+                    members[8].push_back(ROCKET);
+                    break;
+                case LINE_2_3:
+                    for (int j=0;j<3;j++) 
+                        members[(i->mainCard)-j].push_back(LINE_2_3);
+                    break;
+                case LINE_1_6:
+                    for (int j=0;j<6;++j) 
+                        members[(i->mainCard)-j].push_back(LINE_1_6);
+                    break;   
+                case LINE_2_4:
+                    for (int j=0;j<4;++j) 
+                        members[(i->mainCard)-j].push_back(LINE_2_4);
+                    break;     
+                case LINE_2_5:
+                    for (int j=0;j<5;++j) 
+                        members[(i->mainCard)-j].push_back(LINE_2_5);
+                    break;  
+                case PLANE_2:
+                    for (int j=0;j<2;++j) 
+                        members[(i->mainCard)-j].push_back(PLANE_2);
+                    break;  
+                case PLANE_3:
+                    for (int j=0;j<3;++j) 
+                        members[(i->mainCard)-j].push_back(PLANE_3);
+                    break;    
+                case PLANE_SUPER:
+                    for (int j=0;j<2;++j) 
+                        members[(i->mainCard)-j].push_back(PLANE_SUPER);
+                    break;                         
+                default:
+                    break;
+            }            
+        }
+    }
+}
+
+
+void State::apart_cards(vector<vector<Hand> >) {
+    // vector<Handtype> members[9];
+    // if (last_action != PASS) {
+
+    // }
+}
+
+
 
 // void allActionCheck(cards cd, vector<cards>& all_actions) {
 // 
@@ -757,7 +856,6 @@ void State::anti_action(vector<Hand>& actions) {
 //             all_actions.push_back(Hand(Line_2[i],LINE_2));
 //         }
 //     }
-
 //     for (int i=0;i<Line_1_num;i++) {
 //         if (has(cd, Line_1[i])) {
 //             all_actions.push_back(Hand(Line_1[i],LINE_1));
