@@ -113,7 +113,8 @@ const cards EXP_FOUR_MASK = 0x3ull;
 
 const int CARD_TYPES = 9;
 
-uint64_t myHash[3] = {16668552215174154829ull, 15684088468973760346ull, 14458935525009338918ull };
+// uint64_t myHash[3] = {16668552215174154829ull, 15684088468973760346ull, 14458935525009338918ull };
+uint64_t myHash[64][3] = {16668552215174154829ull, 15684088468973760346ull, 14458935525009338918ull, 17069087732856008244ull, 4665249168328654237ull, 2506651028494935006ull, 4142044020440757338ull, 1838224231312793316ull, 407446862418391519ull, 12651567891252036807ull, 12065738086055235367ull, 17863737910281200644ull, 14818848823590580721ull, 2449328130808507269ull, 3703610699633700225ull, 1247449263731090769ull, 18415012460386301039ull, 10440343481692447988ull, 6575942454424886470ull, 7079388388391540156ull, 1056903953815343530ull, 1302778975914571106ull, 8568378854837631303ull, 8061970819115803990ull, 14325212211899040538ull, 6039537587684889327ull, 8634611165135681786ull, 2373693396233091769ull, 6762593013204091542ull, 3239491292076930509ull, 7851954291664117057ull, 6603879558530891700ull, 18097968031487201671ull, 6237602200615785004ull, 6938166570731171152ull, 10839878235714550601ull, 12558588575245590780ull, 9786719252293315549ull, 14478642443199040409ull, 18318865194440743847ull, 2188075877604972879ull, 13853404042204719420ull, 15790617741847716028ull, 13169103606201132884ull, 7237405842780369298ull, 7319255577297890057ull, 14596021816324768057ull, 3118979015609147186ull, 14964815200706063351ull, 396921024258579884ull, 2784098543079198318ull, 13296736921928741747ull, 1534159419210227095ull, 7210014343715497891ull, 5991736446831530586ull, 930875805330555743ull, 9553559469292047716ull, 3148300683452202202ull, 9343209496481317499ull, 15107591555134261881ull, 12181804936447203596ull, 13210087611768757141ull, 6719066631683055734ull, 3325834051997066068ull, 6391080986949358585ull, 3730782868825969264ull, 17610115084337192332ull, 2147649610319799244ull, 543740767602230636ull, 15812277687345229439ull, 7307517328862940893ull, 14523330419253597995ull, 10034960855476612066ull, 2604432104628846312ull, 13232655076468385361ull, 2989775395494227098ull, 6841544787939108138ull, 17306053772534944427ull, 4839212232905313649ull, 17649931098039478771ull, 4755815132978931169ull, 10990491964609973746ull, 10257606170776784773ull, 12450307457559505408ull, 7462781503201666376ull, 6254484232527537735ull, 17802935049721257336ull, 5765981541309584671ull, 13819469070950802349ull, 12964283009726431281ull, 6364857706746111599ull, 9122691174139123072ull, 11826040702937168613ull, 5579891280180689308ull, 978139813813459485ull, 3414956089563965541ull, 14252933494671180514ull, 8987413421681391908ull, 6937048715218753305ull, 9470313117237644623ull, 4117480305406080765ull, 10387439639194965371ull, 1613004714374024769ull, 11572702902014344759ull, 6925818282466670550ull, 11350684147439743729ull, 13582731901001220562ull, 7096229272808839574ull, 11656602685177029023ull, 12035177389252383273ull, 9601544388911144461ull, 10168261857442669966ull, 1826722813000732362ull, 18126645333604486346ull, 4291537724591403329ull, 17406284394822311124ull, 14982781505061244384ull, 2531783010219297890ull, 8827857058156438233ull, 134902996294667272ull, 6401569462100436384ull, 2177462498408934342ull, 9633905724068725921ull, 8333086144174031401ull, 3225494044143205884ull, 9799683909359747457ull, 5156793947141607110ull, 5765849991854444689ull, 15223857081901539984ull, 12410231686593393582ull, 15590102858949883800ull, 17174959797926922664ull, 787058988844657537ull, 2685506887356308045ull, 14676255597535192704ull, 6647175297046901846ull, 6919052294627046984ull, 13793245618590807689ull, 1145879464798453614ull, 11804454393526935237ull, 1495015275024927761ull, 10764473511429947328ull, 13206476334160523820ull, 13162668047424105333ull, 14535206418010801661ull, 15654880054427191241ull, 10141424475846849666ull, 11140920606112196563ull, 11431128457954766101ull, 7867330980549331256ull, 1922837694387100693ull, 11416179472953463490ull, 12401513342097832696ull, 13218371223108052012ull, 4000949356437243011ull, 7884158610990408253ull, 10707286997474214536ull, 7756363583350225618ull, 3310450739409847266ull, 3345053689537336103ull, 2309171409701299267ull, 13135666138001156036ull, 12463842187737695209ull, 16464897576421676144ull, 7995630649052900248ull, 4454930779258814632ull, 10610981062443131921ull, 6920552190775002977ull, 578760989450696976ull, 15925583449999100184ull, 95889443336856401ull, 17037024464907497596ull, 3860267974905203268ull, 7516036215066551880ull, 4277058413668603281ull, 9786670671884617487ull, 3437603049371422301ull, 13895326348634672006ull, 7724158672266640722ull, 6734435917875600107ull, 4591755121552383383ull, 7039133793920971384ull, 18430580342807362499ull, 16192480689637956038ull, 12598719717892771667ull, 1665625432242099795ull, 17091277853226821782ull, 7927492083339397439ull, 13107747356566013913ull, 3821972150321199266ull, 9537590639044331541ull, 17436595555697649537ull};
 
 const cards Rocket = 0x110000000;
 const int Line_1_5_num = 2;
@@ -228,6 +229,21 @@ const cards Plane_super[5] = {
     0x000440000ull, // 4* (K~A)
 };
 
+
+LARGE_INTEGER seed;
+inline int rand_int(int max) {
+    QueryPerformanceFrequency(&seed);
+    QueryPerformanceCounter(&seed);
+    srand(seed.QuadPart);
+    return (int)rand()%(long long)max;
+}
+
+inline void Srand() {
+    QueryPerformanceFrequency(&seed);
+    QueryPerformanceCounter(&seed);
+    srand(seed.QuadPart);   
+}
+
 struct Cards {
     cards mycards;
     Cards(): mycards(EMPTY_CARDS) {}
@@ -236,7 +252,7 @@ struct Cards {
         mycards(encode(cards_vector)) {}
     
     bool has(cards cd) {
-        for (int i=0;i<16;i++) {
+        for (int i=0;i<16;++i) {
             if ((mycards<<(i*4)) < (cd<<(i*4))) return false;
         }
         return true;
@@ -268,7 +284,7 @@ struct Cards {
         vector<int> decoded_cards;
         for (Cardtype i=NINE;i<=JOKER;i=Cardtype(i+1)) {
             int cardnum = (int)(FULL_MASK & (mycards>>i*4));
-            for (int j=0;j<cardnum;j++) 
+            for (int j=0;j<cardnum;++j) 
                 decoded_cards.push_back(i);
         }
         return decoded_cards;
@@ -278,7 +294,7 @@ struct Cards {
         vector<int> decoded_cards;
         for (Cardtype i=NINE;i<=JOKER;i=Cardtype(i+1)) {
             int cardnum = (int)(FULL_MASK & (cd>>i*4));
-            for (int j=0;j<cardnum;j++) 
+            for (int j=0;j<cardnum;++j) 
                 decoded_cards.push_back(i);
         }
         return decoded_cards;
@@ -295,7 +311,7 @@ struct Cards {
         int type_sum = 0,cardnum;
         for (Cardtype i=NINE;i<=JOKER;i=Cardtype(i+1)) {
             cardnum = (FULL_MASK & (cd>>i*4));
-            if (cardnum) type_sum++;
+            if (cardnum) ++type_sum;
         }
         return type_sum;   
     }
@@ -303,7 +319,7 @@ struct Cards {
     static cards encode(vector<int>& cards_vector) {
         cards cd = EMPTY_CARDS;
         for (vector<int>::iterator i = cards_vector.begin();
-            i != cards_vector.end(); i++) {
+            i != cards_vector.end(); ++i) {
             add(cd, Cardtype(*i), 1);
         }
         return cd;
@@ -478,11 +494,11 @@ struct Node {
 
     Node():states{USER0, USER1, USER2},
         isroot(false), isleaf(false), visit(0), 
-        reward(0), fromHand(PASS_HAND){}
+        reward(0), fromHand(PASS_HAND), childNum(0){}
 
     Node(User user_):states{USER0, USER1, USER2}, user(user_), 
         isroot(false), isleaf(false), isexpand(false),
-        visit(0), reward(0), fromHand(PASS_HAND){}
+        visit(0), reward(0), fromHand(PASS_HAND),childNum(0){}
 
     // Node(State state0, State state1, State state2, User user_):
     //     states{state0, state1, state2},user(user_) {}
@@ -490,7 +506,8 @@ struct Node {
     Node(State state0, State state1, State state2, User user_,cards lord_card_, TransType type):
         states{state0, state1, state2},user(user_),
         isroot(false),isleaf(false),isexpand(false),
-        visit(0), reward(0), fromHand(PASS_HAND), lord_card(lord_card_){
+        visit(0), reward(0), fromHand(PASS_HAND), 
+        lord_card(lord_card_), childNum(0){
             if (type==BLIND) {
                 states[next(user)].cards.mycards = EMPTY_CARDS;                
                 states[last(user)].cards.mycards = EMPTY_CARDS;                
@@ -498,11 +515,12 @@ struct Node {
         }
 
     void nodehash() {
-        hash = myHash[user] ^ states[0].cards.mycards ^ 
-            states[1].cards.mycards ^ states[2].cards.mycards ; 
+        Srand();
+        hash = myHash[rand_int(64)][user] ^ 
+        states[0].cards.mycards ^ states[1].cards.mycards ^ states[2].cards.mycards ; 
     }
     bool isLeaf() {
-        for (int i=0;i<3;i++) {
+        for (int i=0;i<3;++i) {
             if (states[i].cards.mycards == EMPTY_CARDS) {
                 isleaf = true;
                 return true;
@@ -519,7 +537,7 @@ struct Node {
 };
 
 bool has(cards mcd,cards cd) {
-    for (int i=0;i<CARD_TYPES;i++) {
+    for (int i=0;i<CARD_TYPES;++i) {
         if ((mcd<<(i*4)) < (cd<<(i*4))) return false;
     }
     return true;
@@ -632,7 +650,7 @@ void Hand::type_check() {
         }
         // 四带一 || 三带一对
         if (card_type_num == 2){
-            for (int i=0;i<Bombs_num;i++) {
+            for (int i=0;i<Bombs_num;++i) {
                 if ((action & Bombs[i]) == Bombs[i]) {
                     type = JUSTfFOUR;
                     append_type = WITHSINGLE;
@@ -657,7 +675,7 @@ void Hand::type_check() {
         }
         if (card_type_num == 3){
             // 四带两张 or 3*2
-            for (int i=0;i<Bombs_num;i++) {
+            for (int i=0;i<Bombs_num;++i) {
                 if ((action & Bombs[i]) == Bombs[i]) {
                     type = JUSTfFOUR;
                     append_type = WITHTWOSINGLE;
@@ -673,7 +691,7 @@ void Hand::type_check() {
             break;
         }
         // 四张带一对 || 2*3
-        for (int i=0;i<Bombs_num;i++) {
+        for (int i=0;i<Bombs_num;++i) {
             if ((action & Bombs[i]) == Bombs[i]) {
                 type = JUSTfFOUR;
                 append_type = WITHPAIR;
@@ -691,7 +709,7 @@ void Hand::type_check() {
     case 8:
     // 航天飞机 || 2*3飞机带小翼 || 四张连对 || 四带两对
         if (card_type_num == 4) {
-            for (int i=0;i<Plane_2_num;i++) {
+            for (int i=0;i<Plane_2_num;++i) {
                 if ((action & Plane_2[i]) == Plane_2[i]) {
                     type = PLANE_2;
                     append_type = WITHTWOSINGLE;
@@ -726,7 +744,7 @@ void Hand::type_check() {
     case 10:
     // 航天飞机带小翼 || 五连对 || 飞机带大翼
         if (card_type_num == 4) {
-            for (int i=0;i<Plane_super_num;i++) {
+            for (int i=0;i<Plane_super_num;++i) {
                 if ((action & Plane_super[i]) == Plane_super[i]) {
                     type = PLANE_SUPER;
                     append_type = WITHTWOSINGLE;
@@ -820,7 +838,7 @@ void State::anti_action(vector<Hand>& actions) {
 }
 
 void actions_type_sum(vector<Hand>& actions, set<Handtype>& action_types) {
-    for (vector<Hand>::iterator i=actions.begin();i!=actions.end();i++) {
+    for (vector<Hand>::iterator i=actions.begin();i!=actions.end();++i) {
         if (i->type == BOMB) action_types.insert(JUSTfFOUR);
         action_types.insert(i->type);
     }
@@ -859,13 +877,13 @@ void State::rand_action(vector<Hand>& actions) {
 }
 
 void State::member_sum(vector<Hand>& actions, set<Handtype> *members ) {
-    for (vector<Hand>::iterator i = actions.begin(); i!=actions.end(); i++) {
+    for (vector<Hand>::iterator i = actions.begin(); i!=actions.end(); ++i) {
         if (i->type==SINGLE || i->type == PAIR || i->type == THREECARDS || i->type == BOMB) 
             members[i->mainCard].insert(i->type);
         else {
             switch (i->type) {
                 case LINE_1_5:
-                    for (int j=0;j<5;j++) 
+                    for (int j=0;j<5;++j) 
                         members[(i->mainCard)-j].insert(LINE_1_5);
                     break;
                 case ROCKET:
@@ -873,7 +891,7 @@ void State::member_sum(vector<Hand>& actions, set<Handtype> *members ) {
                     members[8].insert(ROCKET);
                     break;
                 case LINE_2_3:
-                    for (int j=0;j<3;j++) 
+                    for (int j=0;j<3;++j) 
                         members[(i->mainCard)-j].insert(LINE_2_3);
                     break;
                 case LINE_1_6:
@@ -940,7 +958,7 @@ void State::apart_cards(vector<Hand>& actions_) {
         }
     }
 
-    for (vector<Hand>::iterator i=actions.begin();i!=actions.end();i++) {
+    for (vector<Hand>::iterator i=actions.begin();i!=actions.end();++i) {
         if (
             i->type!=PASS &&
             i->type!=SINGLE &&
@@ -949,9 +967,9 @@ void State::apart_cards(vector<Hand>& actions_) {
                 if ((cards.mycards & (FULL_MASK << 4*i->mainCard)) 
                     == FOUR_MASK<<(4*i->mainCard)) continue;
                 focusHand.push_back(*i);
-                for (vector<Hand>::iterator j=append_single.begin();j!=append_single.end();j++) 
+                for (vector<Hand>::iterator j=append_single.begin();j!=append_single.end();++j) 
                         focusHand.push_back((*i)+(*j));
-                for (vector<Hand>::iterator j=append_pair.begin();j!=append_pair.end();j++) 
+                for (vector<Hand>::iterator j=append_pair.begin();j!=append_pair.end();++j) 
                         focusHand.push_back((*i)+(*j));                
             } else if (i->type == BOMB || i->type == JUSTfFOUR) {
                 focusHand.push_back(*i);
@@ -959,7 +977,7 @@ void State::apart_cards(vector<Hand>& actions_) {
                 if (pair_num==1){
                     focusHand.push_back((*i)+append_pair[0]);
                 } else {
-                    for (int i1=0;i1<pair_num-1;i1++) {
+                    for (int i1=0;i1<pair_num-1;++i1) {
                         for (int i2=i1+1;i2<pair_num;i2++) {
                             focusHand.push_back(((*i)+append_pair[i1])+append_pair[i2]);
                         }
@@ -972,14 +990,14 @@ void State::apart_cards(vector<Hand>& actions_) {
     }
 
     int cards_num_ = cards.cards_sum(cards.mycards);
-    for (vector<Hand>::iterator i=actions.begin();i!=actions.end();i++) {
+    for (vector<Hand>::iterator i=actions.begin();i!=actions.end();++i) {
         if (i->cardsum() == cards_num_) {
             actions_.clear();
             actions_.push_back(*i);
             return ;
         }
     }
-    for (vector<Hand>::iterator i=focusHand.begin();i!=focusHand.end();i++) {
+    for (vector<Hand>::iterator i=focusHand.begin();i!=focusHand.end();++i) {
         if (i->cardsum() == cards_num_) {
             actions_.clear();
             actions_.push_back(*i);
@@ -1009,7 +1027,7 @@ void State::make_decision(vector<Hand>& actions) {
         // }
         // if (last_action.type == THREECARDS) {
         //     if (last_action.append_type == WITHSINGLE) {
-        //         for (vector<Hand>::iterator i=actions.begin();i!=actions.end();i++) {
+        //         for (vector<Hand>::iterator i=actions.begin();i!=actions.end();++i) {
         //             // if (i->type == THREECARDS)
         //         }                
         //     }
@@ -1021,19 +1039,6 @@ void State::make_decision(vector<Hand>& actions) {
 
 
 
-LARGE_INTEGER seed;
-inline int rand_int(int max) {
-    QueryPerformanceFrequency(&seed);
-    QueryPerformanceCounter(&seed);
-    srand(seed.QuadPart);
-    return (int)rand()%(long long)max;
-}
-
-inline void Srand() {
-    QueryPerformanceFrequency(&seed);
-    QueryPerformanceCounter(&seed);
-    srand(seed.QuadPart);   
-}
 
 User rand_game(Node node ) {
     int actionID;

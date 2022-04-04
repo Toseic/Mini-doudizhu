@@ -4,16 +4,20 @@ unordered_map<Hash, Node> nodes;
 
 #define MCTSTimeLimit 1
 #define MCTSGameSize 50
-#define MCTS_v1 10
+#define MCTS_v1 8
+
+#define debug
+
 
 Node Node::newchild(Hand hd) {
     Node newnode = *this;
     newnode.isroot = false;
+    newnode.isexpand = false;
     newnode.childNum = 0;
     newnode.fromHand = hd;
     newnode.states[user].myaction = hd;
     newnode.states[user].cards.mycards -= hd.action;
-    newnode.user = next(newnode.user);
+    newnode.user = next(user);
     newnode.parent = hash;
     newnode.visit = 0; newnode.reward = 0;
 
@@ -132,7 +136,18 @@ void node_check(Node& node,User rootuser) {
 
 // data 回传
     Hash hash = node.hash;
+    #ifdef debug
+    int count = 0;
+    #endif
     while (1) {
+        #ifdef debug
+            // cout << "^" ;
+            count ++;
+            if (count > 100000) {
+                cout << "unend loop !!!"<< endl;
+                system("pause");
+            }
+        #endif
         ++ nodes[hash].visit ;
         if (iswin) {
              nodes[hash].reward += rew;
@@ -157,20 +172,39 @@ void node_guess(Node& node, Cards rest, vector<Hand>* history,
     node.states[next(node.user)].cards = Cards::encode(next_cards);
 }
 
+
+
 Hand mcts(Node mainnode) {
     clock_t start,finish;
     mainnode.isroot = true;
-    // nodes.clear();
+    nodes.clear();
     nodes[mainnode.hash] = mainnode;
     Node & node = nodes[mainnode.hash];
     if (!node.isexpand && !(node.isLeaf())) node.expand();
     if (node.childNum == 0 ) return PASS_HAND;
     start = clock();
     while (1) {
+        // #ifdef debug
+        // cout << "* ";
+        // #endif
         finish = clock();
-        if ((double)(finish-start)/CLOCKS_PER_SEC >= MCTSTimeLimit) break;
+        if ((double)(finish-start)/CLOCKS_PER_SEC >= MCTSTimeLimit) {
+            start = clock();
+            #ifdef debug
+            cout <<endl <<"---------------------"<< endl;
+            #endif
+            break;
+        }
         Node & choosedNode = nodes[nodeChoose(node)];
+
         node_check(choosedNode, mainnode.user);
+
+        #ifdef debug
+        // cout << nodes.size() << " ";
+        // if(choosedNode.isLeaf()) cout << "& "; 
+        #endif
+        if(!choosedNode.isLeaf()) choosedNode.expand();
+        // start = clock();
     }
     int bestNode = -1;
     double max_eval = -1e5;
@@ -184,11 +218,13 @@ Hand mcts(Node mainnode) {
             bestNode = i;
         }
     }
+    #ifdef debug
+    cout <<nodes.size()<<" "<< node.visit << " " << node.reward<< endl ;
+    #endif
     return nodes[node.children[bestNode]].fromHand;
 
 }
-#define debug
-
+// #define timecheck
 
 int main() {
     Srand();
@@ -211,6 +247,10 @@ int main() {
     #endif
     User user = USER0;
     while(1) {
+        #ifdef timecheck
+        clock_t mainstart,mainend;
+        mainstart = clock();
+        #endif
         if (states[user].cards.mycards == EMPTY_CARDS) break;
         Node mainnode(states[0],states[1],states[2],user,lord_card,BLIND);
         Cards rest_card = states[next(user)].cards.mycards + states[last(user)].cards.mycards;
@@ -228,6 +268,7 @@ int main() {
         } else states[next(user)].last_action = states[user].last_action;
         
         #ifdef debug
+        
         vector<int>action_vec = Cards::decode(action.action);
         cout << "user" << user << " ";
         if (action_vec.size() == 0) cout << "pass";
@@ -235,9 +276,13 @@ int main() {
             cout << card_name[action_vec[j]]<<" ";
         }
         cout << endl;
-        // system("pause");
+        system("pause");
         #endif
         user = next(user);
+        #ifdef timecheck
+        mainend = clock();
+        cout << (double)(mainend - mainstart)/CLOCKS_PER_SEC << endl;
+        #endif
     }
     cout << "WINNER: " << user << endl; 
 }
