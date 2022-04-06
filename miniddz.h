@@ -11,15 +11,17 @@
 #include <cmath>
 #include <unordered_map>
 #include <set>
-#include "jsoncpp/json.h"
+// #include "jsoncpp/json.h"
 
 using namespace std;
+
+
 // 在程序中储存手牌有两种方式，一种是vector<int>储存
 // 对应关系：
 //  0  1  2  3  4  5  6    7    8
 //  9  10 J  Q  K  A  2  Joker JOKER
 
-// 第二种是编码方式，用一个unsighed long long int 储存一手牌
+// 第二种是编码方式，用一个unsigned long long int 储存一手牌
 // 从右向左按照每四位编码一种牌，注意每四位对应于牌的张数
 // ，而不是是否有此牌
 //   <----   <----    <----  <----
@@ -87,11 +89,11 @@ const int mainCardNum[18] = {
 
 // 副牌的类型
 typedef enum {
-    NONE = 0,
-    WITHSINGLE = 1,
-    WITHTWOSINGLE = 2,
-    WITHPAIR = 3,
-    WITHTWOPAIR = 4
+    NONE = -1,
+    WITHSINGLE = 0,
+    WITHTWOSINGLE = 1,
+    WITHPAIR = 2,
+    WITHTWOPAIR = 3
 } Appendtype;
 
 //各种appendtype的牌张个数
@@ -104,6 +106,10 @@ typedef enum {
     LORD = 0,
     FARMER,
 } User;
+
+typedef enum {
+    ANTI = 0, FREE = 1
+} AppendWorkMode;
 
 typedef enum {
     BLIND,
@@ -127,7 +133,7 @@ const cards EXP_FOUR_MASK = 0x3ull;
 const int CARD_TYPES = 9;
 
 // uint64_t myHash[3] = {16668552215174154829ull, 15684088468973760346ull, 14458935525009338918ull };
-uint64_t myHash[64][3] = {16668552215174154829ull, 15684088468973760346ull, 14458935525009338918ull, 17069087732856008244ull, 4665249168328654237ull, 2506651028494935006ull, 4142044020440757338ull, 1838224231312793316ull, 407446862418391519ull, 12651567891252036807ull, 12065738086055235367ull, 17863737910281200644ull, 14818848823590580721ull, 2449328130808507269ull, 3703610699633700225ull, 1247449263731090769ull, 18415012460386301039ull, 10440343481692447988ull, 6575942454424886470ull, 7079388388391540156ull, 1056903953815343530ull, 1302778975914571106ull, 8568378854837631303ull, 8061970819115803990ull, 14325212211899040538ull, 6039537587684889327ull, 8634611165135681786ull, 2373693396233091769ull, 6762593013204091542ull, 3239491292076930509ull, 7851954291664117057ull, 6603879558530891700ull, 18097968031487201671ull, 6237602200615785004ull, 6938166570731171152ull, 10839878235714550601ull, 12558588575245590780ull, 9786719252293315549ull, 14478642443199040409ull, 18318865194440743847ull, 2188075877604972879ull, 13853404042204719420ull, 15790617741847716028ull, 13169103606201132884ull, 7237405842780369298ull, 7319255577297890057ull, 14596021816324768057ull, 3118979015609147186ull, 14964815200706063351ull, 396921024258579884ull, 2784098543079198318ull, 13296736921928741747ull, 1534159419210227095ull, 7210014343715497891ull, 5991736446831530586ull, 930875805330555743ull, 9553559469292047716ull, 3148300683452202202ull, 9343209496481317499ull, 15107591555134261881ull, 12181804936447203596ull, 13210087611768757141ull, 6719066631683055734ull, 3325834051997066068ull, 6391080986949358585ull, 3730782868825969264ull, 17610115084337192332ull, 2147649610319799244ull, 543740767602230636ull, 15812277687345229439ull, 7307517328862940893ull, 14523330419253597995ull, 10034960855476612066ull, 2604432104628846312ull, 13232655076468385361ull, 2989775395494227098ull, 6841544787939108138ull, 17306053772534944427ull, 4839212232905313649ull, 17649931098039478771ull, 4755815132978931169ull, 10990491964609973746ull, 10257606170776784773ull, 12450307457559505408ull, 7462781503201666376ull, 6254484232527537735ull, 17802935049721257336ull, 5765981541309584671ull, 13819469070950802349ull, 12964283009726431281ull, 6364857706746111599ull, 9122691174139123072ull, 11826040702937168613ull, 5579891280180689308ull, 978139813813459485ull, 3414956089563965541ull, 14252933494671180514ull, 8987413421681391908ull, 6937048715218753305ull, 9470313117237644623ull, 4117480305406080765ull, 10387439639194965371ull, 1613004714374024769ull, 11572702902014344759ull, 6925818282466670550ull, 11350684147439743729ull, 13582731901001220562ull, 7096229272808839574ull, 11656602685177029023ull, 12035177389252383273ull, 9601544388911144461ull, 10168261857442669966ull, 1826722813000732362ull, 18126645333604486346ull, 4291537724591403329ull, 17406284394822311124ull, 14982781505061244384ull, 2531783010219297890ull, 8827857058156438233ull, 134902996294667272ull, 6401569462100436384ull, 2177462498408934342ull, 9633905724068725921ull, 8333086144174031401ull, 3225494044143205884ull, 9799683909359747457ull, 5156793947141607110ull, 5765849991854444689ull, 15223857081901539984ull, 12410231686593393582ull, 15590102858949883800ull, 17174959797926922664ull, 787058988844657537ull, 2685506887356308045ull, 14676255597535192704ull, 6647175297046901846ull, 6919052294627046984ull, 13793245618590807689ull, 1145879464798453614ull, 11804454393526935237ull, 1495015275024927761ull, 10764473511429947328ull, 13206476334160523820ull, 13162668047424105333ull, 14535206418010801661ull, 15654880054427191241ull, 10141424475846849666ull, 11140920606112196563ull, 11431128457954766101ull, 7867330980549331256ull, 1922837694387100693ull, 11416179472953463490ull, 12401513342097832696ull, 13218371223108052012ull, 4000949356437243011ull, 7884158610990408253ull, 10707286997474214536ull, 7756363583350225618ull, 3310450739409847266ull, 3345053689537336103ull, 2309171409701299267ull, 13135666138001156036ull, 12463842187737695209ull, 16464897576421676144ull, 7995630649052900248ull, 4454930779258814632ull, 10610981062443131921ull, 6920552190775002977ull, 578760989450696976ull, 15925583449999100184ull, 95889443336856401ull, 17037024464907497596ull, 3860267974905203268ull, 7516036215066551880ull, 4277058413668603281ull, 9786670671884617487ull, 3437603049371422301ull, 13895326348634672006ull, 7724158672266640722ull, 6734435917875600107ull, 4591755121552383383ull, 7039133793920971384ull, 18430580342807362499ull, 16192480689637956038ull, 12598719717892771667ull, 1665625432242099795ull, 17091277853226821782ull, 7927492083339397439ull, 13107747356566013913ull, 3821972150321199266ull, 9537590639044331541ull, 17436595555697649537ull};
+// uint64_t myHash[64][3] = {16668552215174154829ull, 15684088468973760346ull, 14458935525009338918ull, 17069087732856008244ull, 4665249168328654237ull, 2506651028494935006ull, 4142044020440757338ull, 1838224231312793316ull, 407446862418391519ull, 12651567891252036807ull, 12065738086055235367ull, 17863737910281200644ull, 14818848823590580721ull, 2449328130808507269ull, 3703610699633700225ull, 1247449263731090769ull, 18415012460386301039ull, 10440343481692447988ull, 6575942454424886470ull, 7079388388391540156ull, 1056903953815343530ull, 1302778975914571106ull, 8568378854837631303ull, 8061970819115803990ull, 14325212211899040538ull, 6039537587684889327ull, 8634611165135681786ull, 2373693396233091769ull, 6762593013204091542ull, 3239491292076930509ull, 7851954291664117057ull, 6603879558530891700ull, 18097968031487201671ull, 6237602200615785004ull, 6938166570731171152ull, 10839878235714550601ull, 12558588575245590780ull, 9786719252293315549ull, 14478642443199040409ull, 18318865194440743847ull, 2188075877604972879ull, 13853404042204719420ull, 15790617741847716028ull, 13169103606201132884ull, 7237405842780369298ull, 7319255577297890057ull, 14596021816324768057ull, 3118979015609147186ull, 14964815200706063351ull, 396921024258579884ull, 2784098543079198318ull, 13296736921928741747ull, 1534159419210227095ull, 7210014343715497891ull, 5991736446831530586ull, 930875805330555743ull, 9553559469292047716ull, 3148300683452202202ull, 9343209496481317499ull, 15107591555134261881ull, 12181804936447203596ull, 13210087611768757141ull, 6719066631683055734ull, 3325834051997066068ull, 6391080986949358585ull, 3730782868825969264ull, 17610115084337192332ull, 2147649610319799244ull, 543740767602230636ull, 15812277687345229439ull, 7307517328862940893ull, 14523330419253597995ull, 10034960855476612066ull, 2604432104628846312ull, 13232655076468385361ull, 2989775395494227098ull, 6841544787939108138ull, 17306053772534944427ull, 4839212232905313649ull, 17649931098039478771ull, 4755815132978931169ull, 10990491964609973746ull, 10257606170776784773ull, 12450307457559505408ull, 7462781503201666376ull, 6254484232527537735ull, 17802935049721257336ull, 5765981541309584671ull, 13819469070950802349ull, 12964283009726431281ull, 6364857706746111599ull, 9122691174139123072ull, 11826040702937168613ull, 5579891280180689308ull, 978139813813459485ull, 3414956089563965541ull, 14252933494671180514ull, 8987413421681391908ull, 6937048715218753305ull, 9470313117237644623ull, 4117480305406080765ull, 10387439639194965371ull, 1613004714374024769ull, 11572702902014344759ull, 6925818282466670550ull, 11350684147439743729ull, 13582731901001220562ull, 7096229272808839574ull, 11656602685177029023ull, 12035177389252383273ull, 9601544388911144461ull, 10168261857442669966ull, 1826722813000732362ull, 18126645333604486346ull, 4291537724591403329ull, 17406284394822311124ull, 14982781505061244384ull, 2531783010219297890ull, 8827857058156438233ull, 134902996294667272ull, 6401569462100436384ull, 2177462498408934342ull, 9633905724068725921ull, 8333086144174031401ull, 3225494044143205884ull, 9799683909359747457ull, 5156793947141607110ull, 5765849991854444689ull, 15223857081901539984ull, 12410231686593393582ull, 15590102858949883800ull, 17174959797926922664ull, 787058988844657537ull, 2685506887356308045ull, 14676255597535192704ull, 6647175297046901846ull, 6919052294627046984ull, 13793245618590807689ull, 1145879464798453614ull, 11804454393526935237ull, 1495015275024927761ull, 10764473511429947328ull, 13206476334160523820ull, 13162668047424105333ull, 14535206418010801661ull, 15654880054427191241ull, 10141424475846849666ull, 11140920606112196563ull, 11431128457954766101ull, 7867330980549331256ull, 1922837694387100693ull, 11416179472953463490ull, 12401513342097832696ull, 13218371223108052012ull, 4000949356437243011ull, 7884158610990408253ull, 10707286997474214536ull, 7756363583350225618ull, 3310450739409847266ull, 3345053689537336103ull, 2309171409701299267ull, 13135666138001156036ull, 12463842187737695209ull, 16464897576421676144ull, 7995630649052900248ull, 4454930779258814632ull, 10610981062443131921ull, 6920552190775002977ull, 578760989450696976ull, 15925583449999100184ull, 95889443336856401ull, 17037024464907497596ull, 3860267974905203268ull, 7516036215066551880ull, 4277058413668603281ull, 9786670671884617487ull, 3437603049371422301ull, 13895326348634672006ull, 7724158672266640722ull, 6734435917875600107ull, 4591755121552383383ull, 7039133793920971384ull, 18430580342807362499ull, 16192480689637956038ull, 12598719717892771667ull, 1665625432242099795ull, 17091277853226821782ull, 7927492083339397439ull, 13107747356566013913ull, 3821972150321199266ull, 9537590639044331541ull, 17436595555697649537ull};
 
 const cards Rocket = 0x110000000;
 const int Line_1_5_num = 2;
@@ -169,8 +175,8 @@ const cards Line_2_6 =
 // 六张连对
     0x000222222ull;  // 2* (9~A)
 
-const int Bombs_num = 7;
-const cards Bombs[7] = {
+const int BomBs_num = 7;
+const cards BomBs[7] = {
     0x000000004ull, // 9
     0x000000040ull, // 10
     0x000000400ull, // J
@@ -385,6 +391,14 @@ struct Hand {
         h3.type_check();
         return h3;
     }
+    bool operator<(const Hand& hd) {
+        if (action < hd.action) return true;
+        return false;
+    }
+    friend bool operator<(const Hand& h1, const Hand& h2) {
+        if (h1.action < h2.action) return true;
+        return false;
+    }
 };
 
 const Hand PASS_HAND(EMPTY_CARDS,PASS);
@@ -413,8 +427,8 @@ struct State {
     }
     void find_bomb(vector<Hand>& vh, Cardtype minline = FAKECARD) {
         for (Cardtype i = Cardtype(minline+1); i<=TWO; i=Cardtype(i+1)) {
-            if ((cards.mycards & Bombs[i]) == Bombs[i]) 
-                vh.push_back(Hand(Bombs[i],BOMB,i));
+            if ((cards.mycards & BomBs[i]) == BomBs[i]) 
+                vh.push_back(Hand(BomBs[i],BOMB,i));
         }
     }
 
@@ -438,6 +452,14 @@ struct State {
                 vh.push_back(Hand(threeCards[i],THREECARDS,i));
         }
     }
+
+    void find_three_cards_only(vector<Hand>& vh, Cardtype minline = FAKECARD) {
+        for (Cardtype i = Cardtype(minline+1); i<=TWO; i=Cardtype(i+1)) {
+            if ((cards.mycards & (FULL_MASK<<i*4)) == (THREE_MASK<<i*4))
+                vh.push_back(Hand(threeCards[i],THREECARDS,i));
+        }
+    }
+
     void find_line_1_5(vector<Hand>& vh, Cardtype minline = FAKECARD) {
         for (Cardtype i = Cardtype(minline+1); i<=ACE-4; i=Cardtype(i+1)) {
             if (cards.has(Line_1_5[i])) {
@@ -558,22 +580,37 @@ struct Node {
 
 ID Node::nowId = 0;
 
-bool has(cards mcd,cards cd) {
-    for (int i=0;i<CARD_TYPES;++i) {
+// mcd的每一种牌的数目都与cd相同或者更多
+bool include(cards mcd,cards cd) {
+    for (int i=0;i<16;++i) {
         if ((mcd<<(i*4)) < (cd<<(i*4))) return false;
     }
     return true;
 }  
 
-bool is(cards mcd, cards cd) {
+// cd的每一种牌的数目都与mcd相同
+bool include_strict(cards mcd,cards cd) {
+    for (int i=0;i<16;++i) {
+        if ((cd & FULL_MASK<<(i*4))
+            && ((mcd & FULL_MASK<<(i*4)) != (cd & FULL_MASK<<(i*4)))) 
+            return false;
+    }
+    return true;
+}  
+
+inline int numof(cards mcd, Cardtype ct) {
+    return (int)(mcd >> (ct*4) & FULL_MASK);
+}
+
+inline bool is(cards mcd, cards cd) {
     return (mcd == cd);
 }
 
-void remove(cards mcd, Cardtype type, int num) {
+inline void remove(cards mcd, Cardtype type, int num) {
     mcd -= ((ull)num << type*4);
 }
 
-void remove(cards mcd, cards cd) {
+inline void remove(cards mcd, cards cd) {
     mcd -= cd;
 }
 
@@ -674,8 +711,8 @@ void Hand::type_check() {
         }
         // 四带一 || 三带一对
         if (card_type_num == 2){
-            for (int i=0;i<Bombs_num;++i) {
-                if ((action & Bombs[i]) == Bombs[i]) {
+            for (int i=0;i<BomBs_num;++i) {
+                if ((action & BomBs[i]) == BomBs[i]) {
                     type = JUSTfFOUR;
                     append_type = WITHSINGLE;
                     mainCard = find_4(action);
@@ -699,8 +736,8 @@ void Hand::type_check() {
         }
         if (card_type_num == 3){
             // 四带两张 or 3*2
-            for (int i=0;i<Bombs_num;++i) {
-                if ((action & Bombs[i]) == Bombs[i]) {
+            for (int i=0;i<BomBs_num;++i) {
+                if ((action & BomBs[i]) == BomBs[i]) {
                     type = JUSTfFOUR;
                     append_type = WITHTWOSINGLE;
                     mainCard = find_4(action);
@@ -715,8 +752,8 @@ void Hand::type_check() {
             break;
         }
         // 四张带一对 || 2*3
-        for (int i=0;i<Bombs_num;++i) {
-            if ((action & Bombs[i]) == Bombs[i]) {
+        for (int i=0;i<BomBs_num;++i) {
+            if ((action & BomBs[i]) == BomBs[i]) {
                 type = JUSTfFOUR;
                 append_type = WITHPAIR;
                 mainCard = find_4(action);
@@ -809,11 +846,159 @@ void Hand::type_check() {
 
 }
 
+// 在findAppend()中对顺子进行额外检查
+// check_card是已经减去顺子的cards
+void findAppend_extra(set<Hand>& append_hands, const cards check_card, 
+    const cards action, int each_num) {
+    // 从minline开始
+    for (Cardtype i=NINE; i!=TWO;i=Cardtype(i+1)) {
+        if ((action >> i*4) & FULL_MASK) {
+            if (numof(check_card,i)==1) 
+                append_hands.insert(Hand((1<<4*i),WITHSINGLE));
+            else if (numof(check_card,i)==2 && each_num == 1) {
+                append_hands.insert(Hand(2<<4*i,WITHPAIR));
+            }
+        }
+    }
+}
+
+
+// 找到合适的副牌,不考虑类型，把四种能找到的全找到
+// set内部不会重复
+// 原则：把所有不会干扰到顺子，飞机，炸弹，三张的单牌和对子拿出来
+// 原则：不拆炸弹
+// 对顺子的情况进行额外的检查
+// set里面可能会有多种相同类型副牌，在函数最后提供一个取最优的过程
+void findAppend(vector<Hand>& append_vector, cards mycard) {
+    set<cards> inMid_cards;
+    set<Hand> append_hands;
+    int mycard_num = Cards::cards_sum(mycard);
+
+// 炸弹
+    for (int i=0;i<BomBs_num;i++) 
+        if (include(mycard, BomBs[i])) {
+            mycard -= BomBs[i];
+        } 
+
+// 顺子
+    if (include(mycard,Line_1_6)) {
+        inMid_cards.insert(mycard - Line_1_6);
+        findAppend_extra(append_hands, mycard - Line_1_6, Line_1_6, 1);
+    } 
+    else if (include(mycard, Line_1_5[0])) {
+        inMid_cards.insert(mycard - Line_1_5[0]);      
+        findAppend_extra(append_hands, mycard - Line_1_5[0], Line_1_5[0], 1);  
+    }
+    else if (include(mycard, Line_1_5[1])) {
+        inMid_cards.insert(mycard - Line_1_5[1]);
+        findAppend_extra(append_hands, mycard - Line_1_5[1], Line_1_5[1], 1);
+    }
+    // 连对
+    if (mycard_num >= 6) {
+        for (int i=0;i<Line_2_3_num;i++) 
+            if (include(mycard, Line_2_3[i])) {
+                inMid_cards.insert(mycard - Line_2_3[i]);   
+                findAppend_extra(append_hands, mycard - Line_2_3[i], Line_2_3[i], 2);             
+            }
+
+        if (mycard_num >= 8) {
+            for (int i=0;i<Line_2_4_num;i++) 
+                if (include(mycard, Line_2_4[i])) {
+                    inMid_cards.insert(mycard - Line_2_4[i]);         
+                    findAppend_extra(append_hands, mycard - Line_2_4[i], Line_2_4[i], 2);
+                }
+        }                
+    }
+
+
+// 三张
+    // 需要include_strict，避免将炸弹给拆了
+    // 需要避免把飞机考虑进去
+    for (int i=0;i<threeCards_num-1;i++)
+        if (include_strict(mycard, threeCards[i]) & !include_strict(mycard, threeCards[i+1])) 
+            inMid_cards.insert(mycard - threeCards[i]);
+    if (include_strict(mycard, threeCards[threeCards_num-1]) ) // 需要include_strict
+            inMid_cards.insert(mycard - threeCards[threeCards_num-1]);
+
+// 飞机
+    if (mycard_num >= 6) {
+        for (int i=0;i<Plane_2_num;i++) 
+            if (include(mycard, Plane_2[i]))   
+                inMid_cards.insert(mycard - Plane_2[i]);
+    }
+
+    int midcard_num = inMid_cards.size();
+    cards all_addup = 0ull;
+
+    for (set<cards>::iterator i = inMid_cards.begin();i!=inMid_cards.end();i++) 
+        { all_addup += *i; }
+
+
+    for (Cardtype i=NINE;i<=JOKER;i=Cardtype(i+1)) {
+        // 只考虑两张及以下而且在inMid_cards次次都出现
+        if (numof(mycard, i) == 1 && numof(all_addup, i) == midcard_num) {
+                append_hands.insert(Hand((1ull << i*4),WITHSINGLE));
+        } else if (numof(mycard, i) == 2 && numof(all_addup, i) == midcard_num*2) {
+                append_hands.insert(Hand((2ull << i*4), WITHPAIR));
+        }
+    }
+         
+    // } else { //直接把最小的拿出来
+
+    // }        
+// 处理set
+    int findSingle = 0;
+    int findPair = 0;
+    Hand findsingle1,findsingle2,findpair1,findpair2;
+    for (set<Hand>::iterator i=append_hands.begin();i!=append_hands.end();i++) {
+        if (i->append_type == WITHSINGLE) {
+            if (findSingle == 0) {
+                findSingle++;
+                findsingle1 = *i;
+            } else if (findSingle == 1) {
+                findSingle ++;
+                if (*i < findsingle1) {findsingle2 = findsingle1; findsingle1=*i;}
+                else {findsingle2 = *i;}
+            } else {
+                if (*i < findsingle1) {findsingle2 = findsingle1; findsingle1=*i;}
+                else if (*i < findsingle2) {findsingle2 = *i;}
+            }
+        } else {
+            if (findPair == 0) {
+                findPair++;
+                findpair1 = *i;
+            } else if (findPair == 1) {
+                findPair++;
+                if (*i < findpair1) {findpair2 = findpair1; findpair1 = *i;}
+                else {findpair2 = *i;}
+            } else {
+                if (*i < findpair1) {findpair2 = findpair1; findpair1 = *i;}
+                else if (*i < findpair2) {findpair2 = *i;}
+            }
+        }
+    }
+
+    if (findSingle == 0) {append_vector.push_back(PASS_HAND); append_vector.push_back(PASS_HAND);}
+    else if (findSingle == 1) {append_vector.push_back(findsingle1); append_vector.push_back(PASS_HAND);}
+    else {append_vector.push_back(findsingle1); 
+        append_vector.push_back(Hand(findsingle1.action+findsingle2.action, WITHTWOSINGLE)); }
+    
+    if (findPair == 0) {append_vector.push_back(PASS_HAND); append_vector.push_back(PASS_HAND);}
+    else if (findPair == 1) {append_vector.push_back(findpair1); append_vector.push_back(PASS_HAND); }
+    else { append_vector.push_back(findpair1);
+        append_vector.push_back(Hand(findpair1.action+findpair2.action,WITHTWOPAIR));
+    }
+    
+}
+
+
 
 // last_action在传入时就应当已经被check过type和maincard了
 // 在这个函数里面仅仅找出所有可以反制对手的牌
-// 副牌在此不考虑，在拆牌后再加上
+// 副牌在此会考虑，在拆牌后再加上
 void State::anti_action(vector<Hand>& actions) {
+    vector<Hand> append_hands;
+
     find_rocket(actions);
     actions.push_back(PASS_HAND);
     if (last_action.type == ROCKET) return ;
@@ -858,6 +1043,31 @@ void State::anti_action(vector<Hand>& actions) {
             break;
         }        
     }
+    if (last_action.append_type == NONE) return;
+    findAppend(append_hands, cards.mycards);
+    vector<Hand>::iterator i=actions.begin();
+    while (i!=actions.end()) {
+        if (i->type != BOMB && i->type != ROCKET) {
+            if (append_hands[last_action.append_type] == PASS) {
+                i = actions.erase(i);
+            } else {
+                (i->action) += append_hands[last_action.append_type].action;
+                i->type_check();
+                i++;
+            }
+        } else {
+            i++;
+        }
+    }
+    // else if (last_action.append_type == WITHSINGLE) {
+        
+    // } else if (last_action.append_type == WITHTWOSINGLE) {
+
+    // } else if (last_action.append_type == WITHTWOPAIR) {
+
+    // } else if  (last_action.append_type == WITHTWOPAIR) {
+
+    // }
 
 }
 
@@ -966,59 +1176,43 @@ void State::apart_cards(vector<Hand>& actions_) {
     vector<Hand> focusHand;
     set<Handtype> members[9];
     vector<Hand> actions;
-    // set<Handtype> all_action_types;
-    vector<Hand> append_single;
-    vector<Hand> append_pair;
+    vector<Hand> append_hands;
     free_action(actions);
     member_sum(actions, members);
-    
+    findAppend(append_hands, cards.mycards);
 
+    focusHand.push_back(Hand(append_hands[0].action,SINGLE));
+    focusHand[0].type_check();
+    focusHand.push_back(Hand(append_hands[2].action,PAIR));
+    focusHand[1].type_check();
 
-    for (Cardtype i = NINE; i<=JOKER; i=Cardtype(i+1)) {
-        if (members[i].size()==1) {
-            Cards appendact = (1ull << i*4);
-            append_single.push_back(Hand(appendact.mycards,WITHSINGLE));
-            focusHand.push_back(Hand(appendact.mycards,SINGLE,i));
-        } else if (members[i].size()==2) {
-            if (members[i].find(PAIR)!=members[i].end()) {
-                Cards appendact = (2ull << i*4);
-                append_pair.push_back(Hand(appendact.mycards,WITHPAIR));
-                focusHand.push_back(Hand(appendact.mycards,PAIR,i));
-            }
-        }
-    }
 
     for (vector<Hand>::iterator i=actions.begin();i!=actions.end();++i) {
         if (
             i->type!=PASS &&
             i->type!=SINGLE &&
             i->type!=PAIR ) {
+
             if (i->type == THREECARDS) {
                 if ((cards.mycards & (FULL_MASK << 4*i->mainCard)) 
                     == FOUR_MASK<<(4*i->mainCard)) continue;
                 focusHand.push_back(*i);
-                for (vector<Hand>::iterator j=append_single.begin();j!=append_single.end();++j) 
-                        focusHand.push_back((*i)+(*j));
-                for (vector<Hand>::iterator j=append_pair.begin();j!=append_pair.end();++j) 
-                        focusHand.push_back((*i)+(*j));                
+                focusHand.push_back((*i)+append_hands[0]);
+                focusHand.push_back((*i)+append_hands[2]);
+            
+
             } else if (i->type == BOMB || i->type == JUSTfFOUR) {
                 focusHand.push_back(*i);
-                int pair_num =append_pair.size();
-                if (pair_num==1){
-                    focusHand.push_back((*i)+append_pair[0]);
-                } else {
-                    for (int i1=0;i1<pair_num-1;++i1) {
-                        for (int i2=i1+1;i2<pair_num;i2++) {
-                            focusHand.push_back(((*i)+append_pair[i1])+append_pair[i2]);
-                        }
-                    }
-                }
+                focusHand.push_back((*i)+append_hands[1]);
+                focusHand.push_back((*i)+append_hands[3]);
+
             } else {
                 focusHand.push_back(*i);
             }
         }
     }
 
+    // 若存在一次打完所有手牌的机会，就只设这一个行动方案
     int cards_num_ = cards.cards_sum(cards.mycards);
     for (vector<Hand>::iterator i=actions.begin();i!=actions.end();++i) {
         if (i->cardsum() == cards_num_) {
@@ -1036,32 +1230,20 @@ void State::apart_cards(vector<Hand>& actions_) {
     }
     if (focusHand.size()==0) actions_= actions;
     else actions_ = focusHand;
+
+    set<Hand>action_set (actions_.begin(),actions_.end());
+    actions_.assign(action_set.begin(),action_set.end());
 }
 
 
-// 逻辑枢纽，牌型反制时的副牌的查找
+// 逻辑枢纽
 void State::make_decision(vector<Hand>& actions) {
     if (last_action == PASS) {
         apart_cards(actions);
     } else {
         vector<Hand> main_action;
         anti_action(main_action);
-        // if (last_action.append_type == WITHSINGLE) {
-            
-        // } else if (last_action.append_type == WITHPAIR) {
 
-        // } else if (last_action.append_type == WITHTWOSINGLE) {
-
-        // } else if (last_action.append_type == WITHTWOPAIR) {
-
-        // }
-        // if (last_action.type == THREECARDS) {
-        //     if (last_action.append_type == WITHSINGLE) {
-        //         for (vector<Hand>::iterator i=actions.begin();i!=actions.end();++i) {
-        //             // if (i->type == THREECARDS)
-        //         }                
-        //     }
-        // }
         actions = main_action;
     }
 }

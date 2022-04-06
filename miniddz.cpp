@@ -7,7 +7,7 @@ unordered_map<ID, Node> nodes;
 #define MCTS_v1 0.5
 
 #define debug
-// #define showdetail
+#define showdetail
 
 Node Node::newchild(Hand hd) {
     Node newnode = *this;
@@ -192,7 +192,6 @@ Hand mcts(Node mainnode) {
         #endif
         finish = clock();
         if ((double)(finish-start)/CLOCKS_PER_SEC >= MCTSTimeLimit) {
-            start = clock();
             #ifdef showdetail
             cout <<endl <<"---------------------"<< endl;
             #endif
