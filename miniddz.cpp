@@ -1,13 +1,13 @@
 #include "miniddz.h"
 
-unordered_map<Hash, Node> nodes;
+unordered_map<ID, Node> nodes;
 
-#define MCTSTimeLimit 1
+#define MCTSTimeLimit 0.5
 #define MCTSGameSize 50
-#define MCTS_v1 8
+#define MCTS_v1 0.5
 
 #define debug
-
+// #define showdetail
 
 Node Node::newchild(Hand hd) {
     Node newnode = *this;
@@ -18,7 +18,7 @@ Node Node::newchild(Hand hd) {
     newnode.states[user].myaction = hd;
     newnode.states[user].cards.mycards -= hd.action;
     newnode.user = next(user);
-    newnode.parent = hash;
+    newnode.parent = Id;
     newnode.visit = 0; newnode.reward = 0;
 
     if (hd != PASS) newnode.states[newnode.user].last_action = hd;
@@ -26,18 +26,21 @@ Node Node::newchild(Hand hd) {
         {newnode.states[newnode.user].last_action = PASS_HAND;}
     else {newnode.states[newnode.user].last_action = states[user].last_action;}
 
-    newnode.nodehash();
-    children[childNum] = newnode.hash;
+    newnode.nodeID();
+    children[childNum] = newnode.Id;
     childNum ++;
     return newnode;
 }
 
 void Node::expand() {
+    #ifdef debug
+    // cout << "$ ";
+    #endif
     vector<Hand>actions;
     states[user].make_decision(actions);
     for (vector<Hand>::iterator i=actions.begin(); i!=actions.end();i++) {
         Node newnode = newchild(*i);
-        nodes[newnode.hash] = newnode;
+        nodes[newnode.Id] = newnode;
     }
     isexpand = true;
 }
@@ -48,7 +51,7 @@ double Node::eval() {
     if (!visit) return 100;
     if (!myparent.visit) return 0;
     value = reward/visit + MCTS_v1*sqrt(log(myparent.visit)/visit +1e-5);
-
+    return value;
 }
 
 double Node::reward_eval() {
@@ -84,7 +87,7 @@ void game_init(State * states, cards& lord_card) {
     states[USER0].last_action = PASS_HAND;
 }
 
-Hash nodeChoose(const Node & node) {
+ID nodeChoose(const Node & node) {
     double best_eval = -1e5; int bestnode = -1;
     for (int i=0;i<node.childNum;i++) {
         Node & child = nodes[node.children[i]];
@@ -135,7 +138,7 @@ void node_check(Node& node,User rootuser) {
     }
 
 // data 回传
-    Hash hash = node.hash;
+    ID thisid = node.Id;
     #ifdef debug
     int count = 0;
     #endif
@@ -148,16 +151,16 @@ void node_check(Node& node,User rootuser) {
                 system("pause");
             }
         #endif
-        ++ nodes[hash].visit ;
+        ++ nodes[thisid].visit ;
         if (iswin) {
-             nodes[hash].reward += rew;
+             nodes[thisid].reward += rew;
         } 
         // else {
             //  nodes[hash].reward += rew;
         // }
-        if (nodes[hash].isroot) break;
-        Hash newhash = nodes[hash].parent;
-        hash = newhash;
+        if (nodes[thisid].isroot) break;
+        ID newid = nodes[thisid].parent;
+        thisid = newid;
     }
 }
 
@@ -178,19 +181,19 @@ Hand mcts(Node mainnode) {
     clock_t start,finish;
     mainnode.isroot = true;
     nodes.clear();
-    nodes[mainnode.hash] = mainnode;
-    Node & node = nodes[mainnode.hash];
+    nodes[mainnode.Id] = mainnode;
+    Node & node = nodes[mainnode.Id];
     if (!node.isexpand && !(node.isLeaf())) node.expand();
     if (node.childNum == 0 ) return PASS_HAND;
     start = clock();
     while (1) {
-        // #ifdef debug
-        // cout << "* ";
-        // #endif
+        #ifdef showdetail
+        cout << "* ";
+        #endif
         finish = clock();
         if ((double)(finish-start)/CLOCKS_PER_SEC >= MCTSTimeLimit) {
             start = clock();
-            #ifdef debug
+            #ifdef showdetail
             cout <<endl <<"---------------------"<< endl;
             #endif
             break;
@@ -199,9 +202,9 @@ Hand mcts(Node mainnode) {
 
         node_check(choosedNode, mainnode.user);
 
-        #ifdef debug
+        #ifdef showdetail
         // cout << nodes.size() << " ";
-        // if(choosedNode.isLeaf()) cout << "& "; 
+        if(choosedNode.isLeaf()) cout << "& "; 
         #endif
         if(!choosedNode.isLeaf()) choosedNode.expand();
         // start = clock();
@@ -253,6 +256,8 @@ int main() {
         #endif
         if (states[user].cards.mycards == EMPTY_CARDS) break;
         Node mainnode(states[0],states[1],states[2],user,lord_card,BLIND);
+        Node::nowId = 0;
+        mainnode.nodeID();
         Cards rest_card = states[next(user)].cards.mycards + states[last(user)].cards.mycards;
         int num_last = Cards::cards_sum(states[last(user)].cards.mycards);
         int num_next = Cards::cards_sum(states[next(user)].cards.mycards);

@@ -21,14 +21,15 @@ using namespace std;
 //  0x000000004  -> 9*4
 //  0x110000000  -> 王炸
 // 
-// 合法性检查范围：
+//  合法性检查范围：
 //  仅仅在拆牌和压上家的牌时才会使用，
-// 若添加人机交互功能，则仅仅限于合法调试
+//  若添加人机交互功能，则仅仅限于合法调试
 // 
 // 
 
 typedef unsigned long long ull;
-typedef unsigned long long Hash;
+// 将会被废弃 ！！！
+typedef int ID;
 typedef unsigned long long cards;
 
 typedef enum {
@@ -73,6 +74,7 @@ const int mainCardNum[18] = {
     6,9,8,4,4,2
 };
 
+// 副牌的类型
 typedef enum {
     NONE = 0,
     WITHSINGLE = 1,
@@ -244,6 +246,7 @@ inline void Srand() {
     srand(seed.QuadPart);   
 }
 
+
 struct Cards {
     cards mycards;
     Cards(): mycards(EMPTY_CARDS) {}
@@ -332,6 +335,7 @@ struct Cards {
 
 };
 
+// 出的一次牌
 struct Hand {
     cards action;
     Handtype type;
@@ -374,6 +378,7 @@ struct Hand {
 
 const Hand PASS_HAND(EMPTY_CARDS,PASS);
 
+// 某个玩家的某个时间的状态
 struct State {
     Cards cards;
     User user;
@@ -481,12 +486,14 @@ struct State {
     }
 };
 
+// 三个玩家的状态放在一起成为一个节点
 struct Node {
     State states[3];
     cards lord_card;
     User user;
-    Hash hash;
-    Hash parent,children[50];
+    static ID nowId;
+    ID Id;
+    ID parent,children[50];
     Hand fromHand;
     bool isroot, isleaf, isexpand;
     int childNum;
@@ -514,10 +521,12 @@ struct Node {
             }
         }
 
-    void nodehash() {
-        Srand();
-        hash = myHash[rand_int(64)][user] ^ 
-        states[0].cards.mycards ^ states[1].cards.mycards ^ states[2].cards.mycards ; 
+    void nodeID() {
+        // Srand();
+        // hash = myHash[rand_int(64)][user] ^ 
+        // states[0].cards.mycards ^ states[1].cards.mycards ^ states[2].cards.mycards ; 
+        Id = nowId;
+        nowId ++;
     }
     bool isLeaf() {
         for (int i=0;i<3;++i) {
@@ -535,6 +544,8 @@ struct Node {
     void expand();
 
 };
+
+ID Node::nowId = 0;
 
 bool has(cards mcd,cards cd) {
     for (int i=0;i<CARD_TYPES;++i) {
@@ -555,6 +566,7 @@ void remove(cards mcd, cards cd) {
     mcd -= cd;
 }
 
+// 在进行牌型分类时，找到一手牌的miancard
 inline Cardtype find_1(cards cd) {
     Cardtype ans = UNKNOWNCARD;
     for (Cardtype i = NINE; i<=JOKER; i=Cardtype(i+1)) {
@@ -591,6 +603,7 @@ inline Cardtype find_4(cards cd) {
     return ans;
 }
 
+// 
 void Hand::type_check() {
     int cards_num = Cards::cards_sum(action);
     int card_type_num = Cards::card_types(action);
@@ -837,10 +850,12 @@ void State::anti_action(vector<Hand>& actions) {
 
 }
 
+// 在一个vector<action>里面统计所有牌参与到了多少种handtype
+// 暂时没被用到
 void actions_type_sum(vector<Hand>& actions, set<Handtype>& action_types) {
     for (vector<Hand>::iterator i=actions.begin();i!=actions.end();++i) {
         if (i->type == BOMB) action_types.insert(JUSTfFOUR);
-        action_types.insert(i->type);
+        else action_types.insert(i->type);
     }
 }
 
@@ -931,6 +946,10 @@ void State::member_sum(vector<Hand>& actions, set<Handtype> *members ) {
 // 找出有搜索价值的主牌
 // 包括大牌，散牌
 // 大牌为了使得下两家接不住，散牌为了方便把散牌打掉
+// // 一些奇怪的理论：找出出手的
+// 副牌处理思路，如果有单牌仅仅只能单打的，如果只有一个，试着把它用三带一打掉
+// 如果有两个或以上，把小的那个立刻打掉，剩下的看情况
+// 
 void State::apart_cards(vector<Hand>& actions_) {
     Cards mycard_cp = cards.mycards;
     vector<Hand> focusHand;
