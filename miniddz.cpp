@@ -7,7 +7,7 @@ unordered_map<ID, Node> nodes;
 #define MCTS_v1 0.5
 
 #define debug
-#define showdetail
+// #define showdetail
 
 Node Node::newchild(Hand hd) {
     Node newnode = *this;
@@ -113,6 +113,9 @@ void node_check(Node& node,User rootuser) {
     int iswin;
 // rollout
     for (int i=0;i<MCTSGameSize;i++) {
+        #ifdef showdetail
+        cout << "^ ";
+        #endif
         if (rand_game(node) == LORD) {
             if (node.user == LORD) win++;
         } else {
@@ -136,6 +139,7 @@ void node_check(Node& node,User rootuser) {
             else iswin = 0; 
         }
     }
+
 
 // data 回传
     ID thisid = node.Id;
@@ -205,8 +209,10 @@ Hand mcts(Node mainnode) {
         // cout << nodes.size() << " ";
         if(choosedNode.isLeaf()) cout << "& "; 
         #endif
+
         if(!choosedNode.isLeaf()) choosedNode.expand();
         // start = clock();
+
     }
     int bestNode = -1;
     double max_eval = -1e5;
@@ -221,7 +227,7 @@ Hand mcts(Node mainnode) {
         }
     }
     #ifdef debug
-    cout <<nodes.size()<<" "<< node.visit << " " << node.reward<< endl ;
+    // cout <<nodes.size()<<" "<< node.visit << " " << node.reward<< endl ;
     #endif
     return nodes[node.children[bestNode]].fromHand;
 
@@ -280,11 +286,12 @@ int main() {
             cout << card_name[action_vec[j]]<<" ";
         }
         cout << endl;
-        system("pause");
+        // system("pause");
         #endif
         user = next(user);
         #ifdef timecheck
         mainend = clock();
+
         cout << (double)(mainend - mainstart)/CLOCKS_PER_SEC << endl;
         #endif
     }

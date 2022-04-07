@@ -1047,8 +1047,8 @@ void State::anti_action(vector<Hand>& actions) {
     findAppend(append_hands, cards.mycards);
     vector<Hand>::iterator i=actions.begin();
     while (i!=actions.end()) {
-        if (i->type != BOMB && i->type != ROCKET) {
-            if (append_hands[last_action.append_type] == PASS) {
+        if (i->type != BOMB && i->type != ROCKET && i->type != PASS) {
+            if (append_hands[last_action.append_type] == PASS || !cards.has(i->action)) {
                 i = actions.erase(i);
             } else {
                 (i->action) += append_hands[last_action.append_type].action;
@@ -1088,6 +1088,7 @@ void State::free_action(vector<Hand>& actions) {
     find_line_1_5(actions);
     find_single(actions);
     find_pair(actions);
+    find_single(actions);
     find_three_cards(actions);
 
     if (card_num>=6 ) {
@@ -1215,6 +1216,7 @@ void State::apart_cards(vector<Hand>& actions_) {
     // 若存在一次打完所有手牌的机会，就只设这一个行动方案
     int cards_num_ = cards.cards_sum(cards.mycards);
     for (vector<Hand>::iterator i=actions.begin();i!=actions.end();++i) {
+        if (!cards.has(i->action)) *i = PASS_HAND;
         if (i->cardsum() == cards_num_) {
             actions_.clear();
             actions_.push_back(*i);
@@ -1222,6 +1224,7 @@ void State::apart_cards(vector<Hand>& actions_) {
         }
     }
     for (vector<Hand>::iterator i=focusHand.begin();i!=focusHand.end();++i) {
+        if (!cards.has(i->action)) *i = PASS_HAND;
         if (i->cardsum() == cards_num_) {
             actions_.clear();
             actions_.push_back(*i);
@@ -1256,6 +1259,9 @@ User rand_game(Node node ) {
     int actionID;
     User user = node.user;
     Srand();
+    //   debug
+    int times = 0;
+    //   debug
     while (1) {
         vector<Hand> actions;
         if (node.states[user].cards.mycards == EMPTY_CARDS) break;
@@ -1268,6 +1274,10 @@ User rand_game(Node node ) {
             node.states[next(user)].last_action = PASS_HAND;
         else node.states[next(user)].last_action = node.states[user].last_action;
         user = next(user);
+        // debug
+        times++;
+        if (times >= 10000) {cout <<"loop error!"; system("pause");}
+        // debug
     }
     return user;
 }
