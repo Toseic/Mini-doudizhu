@@ -10,3 +10,5 @@
 *.jpg
 *.ini
 check*
+*.out
+*.in

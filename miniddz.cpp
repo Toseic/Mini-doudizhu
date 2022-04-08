@@ -2,11 +2,11 @@
 
 unordered_map<ID, Node> nodes;
 
-#define MCTSTimeLimit 0.5
+#define MCTSTimeLimit 1
 #define MCTSGameSize 50
-#define MCTS_v1 0.5
+#define MCTS_v1 3
 
-#define debug
+// #define debug
 // #define showdetail
 
 Node Node::newchild(Hand hd) {
@@ -39,6 +39,7 @@ void Node::expand() {
     vector<Hand>actions;
     states[user].make_decision(actions);
     for (vector<Hand>::iterator i=actions.begin(); i!=actions.end();i++) {
+        if (i->type == ERRORHAND) continue;
         Node newnode = newchild(*i);
         nodes[newnode.Id] = newnode;
     }
@@ -114,7 +115,7 @@ void node_check(Node& node,User rootuser) {
 // rollout
     for (int i=0;i<MCTSGameSize;i++) {
         #ifdef showdetail
-        cout << "^ ";
+        // cout << "^ ";
         #endif
         if (rand_game(node) == LORD) {
             if (node.user == LORD) win++;
@@ -122,7 +123,7 @@ void node_check(Node& node,User rootuser) {
             if (node.user != LORD) win++;
         }
     }
-    if (win > MCTSGameSize/2) {
+    if (win > ((MCTSGameSize*7)/10)) {
         if (rootuser == LORD) {
             if (node.user == LORD) iswin = 1;
             else iswin = 0;
@@ -187,12 +188,18 @@ Hand mcts(Node mainnode) {
     nodes.clear();
     nodes[mainnode.Id] = mainnode;
     Node & node = nodes[mainnode.Id];
+    if (node.user == USER1) {
+        if (node.states[last(node.user)].myaction == PASS 
+        && Cards::cards_sum(node.states[USER2].cards.mycards) == 1) {
+            return PASS_HAND;
+        }
+    }
     if (!node.isexpand && !(node.isLeaf())) node.expand();
     if (node.childNum == 0 ) return PASS_HAND;
     start = clock();
     while (1) {
         #ifdef showdetail
-        cout << "* ";
+
         #endif
         finish = clock();
         if ((double)(finish-start)/CLOCKS_PER_SEC >= MCTSTimeLimit) {
@@ -207,7 +214,8 @@ Hand mcts(Node mainnode) {
 
         #ifdef showdetail
         // cout << nodes.size() << " ";
-        if(choosedNode.isLeaf()) cout << "& "; 
+        if(choosedNode.isLeaf()) cout << "& ";
+        else cout << "* ";
         #endif
 
         if(!choosedNode.isLeaf()) choosedNode.expand();
@@ -227,14 +235,15 @@ Hand mcts(Node mainnode) {
         }
     }
     #ifdef debug
-    // cout <<nodes.size()<<" "<< node.visit << " " << node.reward<< endl ;
+    // cout << nodes.size()<<endl;
+    cout <<nodes.size()<<" "<< node.visit << " " << node.reward<< endl ;
     #endif
     return nodes[node.children[bestNode]].fromHand;
 
 }
 // #define timecheck
 
-int main() {
+int game() {
     Srand();
     State states[3]{USER0, USER1, USER2};
     vector<Hand> history[3];
@@ -286,7 +295,7 @@ int main() {
             cout << card_name[action_vec[j]]<<" ";
         }
         cout << endl;
-        // system("pause");
+        system("pause");
         #endif
         user = next(user);
         #ifdef timecheck
@@ -296,4 +305,9 @@ int main() {
         #endif
     }
     cout << "WINNER: " << user << endl; 
+}
+
+int main() {
+    for (int i=0;i<100;i++)
+    game();
 }
