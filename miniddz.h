@@ -1236,10 +1236,14 @@ void State::apart_cards(vector<Hand>& actions_) {
     member_sum(actions, members);
     findAppend(append_hands, cards.mycards);
 
-    focusHand.push_back(Hand(append_hands[0].action,SINGLE));
-    focusHand[0].type_check();
-    focusHand.push_back(Hand(append_hands[2].action,PAIR));
-    focusHand[1].type_check();
+    if (append_hands[0] != PASS) {
+        focusHand.push_back(Hand(append_hands[0].action,SINGLE));
+        focusHand.back().type_check();        
+    }
+    if (append_hands[2] != PASS) {
+        focusHand.push_back(Hand(append_hands[2].action,PAIR));
+        focusHand.back().type_check();        
+    }
 
 
     for (vector<Hand>::iterator i=actions.begin();i!=actions.end();++i) {
