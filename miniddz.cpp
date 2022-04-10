@@ -6,7 +6,7 @@ unordered_map<ID, Node> nodes;
 #define MCTSGameSize 50
 #define MCTS_v1 3
 
-// #define debug
+#define debug
 // #define showdetail
 
 Node Node::newchild(Hand hd) {
@@ -308,6 +308,6 @@ int game() {
 }
 
 int main() {
-    for (int i=0;i<100;i++)
+    // for (int i=0;i<100;i++)
     game();
 }

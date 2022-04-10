@@ -426,7 +426,7 @@ struct State {
     void make_decision(vector<Hand>&);
 
     void find_rocket(vector<Hand>& vh) {
-        if (cards.mycards & Rocket == Rocket) 
+        if ((cards.mycards & Rocket) == Rocket) 
             vh.push_back(Hand(Rocket,ROCKET,JOKER));
     }
     void find_bomb(vector<Hand>& vh, Cardtype minline = FAKECARD) {
