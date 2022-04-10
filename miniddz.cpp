@@ -171,9 +171,62 @@ void node_check(Node& node,User rootuser) {
 
 void node_guess(Node& node, Cards rest, vector<Hand>* history, 
     int num_last, int num_next) {
+// RAND
+    // vector<int> rest_cards = rest.decode();
+    // random_shuffle(rest_cards.begin(),rest_cards.end());
+    // vector<int>last_cards,next_cards;
+    // last_cards.insert(last_cards.end(),rest_cards.begin(),rest_cards.begin()+num_last);
+    // next_cards.insert(next_cards.end(),rest_cards.end()-num_next,rest_cards.end());
+    // node.states[last(node.user)].cards = Cards::encode(last_cards);
+    // node.states[next(node.user)].cards = Cards::encode(next_cards);
+// PRO
+    //把所有的action加起来
+    Hand history_user_hands = accumulate(history[node.user].begin(),history[node.user].end(),EMPTY_HAND);
+    Hand history_last_hands = accumulate(history[last(node.user)].begin(),history[last(node.user)].end(),EMPTY_HAND);
+    Hand history_next_hands = accumulate(history[next(node.user)].begin(),history[next(node.user)].end(),EMPTY_HAND);
+    vector<int>last_cards,next_cards;
+    for(Cardtype i=NINE;i<=KING;i=Cardtype(i+1)){
+        int restcardnum = numof(rest.mycards,i);
+        int usercardnum = numof(node.states[node.user].cards.mycards,i);
+        int history_user_cardnum = numof(history_user_hands.action,i);
+        int history_last_cardnum = numof(history_last_hands.action,i);
+        int history_next_cardnum = numof(history_next_hands.action,i);
+        //场上只有一个人走过了X且不是炸弹，我方无X，则未走过X的人很大概率有X(X∈9~K)
+        if(history_last_cardnum*history_next_cardnum==0&&history_user_cardnum==0&&usercardnum==0&&restcardnum>0&&restcardnum<4&&rand_int(10)/10.0<BOOM_POS){
+            if(history_last_cardnum==0){
+                last_cards.push_back(int(i));
+                num_last--;
+            }
+            else{
+                next_cards.push_back(int(i));
+                num_next--;
+            }
+            rest.remove(i,1);
+        }
+    }
+    vector<int> lord_cards = Cards::decode(node.lord_card);
+    if(last(node.user)==LORD){
+        for(int i=0;i<3;++i){
+            int lastcardnum = numof(history_last_hands.action,Cardtype(lord_cards[i]));
+            if(lastcardnum==0){
+                last_cards.push_back(lord_cards[i]);
+                rest.remove(Cardtype(lord_cards[i]),1);
+                num_last--;
+            }
+        }
+    }
+    else if(next(node.user)==LORD){
+        for(int i=0;i<3;++i){
+            int nextcardnum = numof(history_next_hands.action,Cardtype(lord_cards[i]));
+            if(int(FULL_MASK&(history_next_hands.action>>lord_cards[i]*4))==0){
+                next_cards.push_back(lord_cards[i]);
+                rest.remove(Cardtype(lord_cards[i]),1);
+                num_next--;
+            }
+        }
+    }
     vector<int> rest_cards = rest.decode();
     random_shuffle(rest_cards.begin(),rest_cards.end());
-    vector<int>last_cards,next_cards;
     last_cards.insert(last_cards.end(),rest_cards.begin(),rest_cards.begin()+num_last);
     next_cards.insert(next_cards.end(),rest_cards.end()-num_next,rest_cards.end());
     node.states[last(node.user)].cards = Cards::encode(last_cards);

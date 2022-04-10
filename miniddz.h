@@ -11,6 +11,7 @@
 #include <cmath>
 #include <unordered_map>
 #include <set>
+#include <numeric>
 // #include "jsoncpp/json.h"
 
 using namespace std;
@@ -115,6 +116,8 @@ typedef enum {
     BLIND,
     FULL,
 } TransType;
+
+const double BOOM_POS = 0.8;
 
 User next(User user) {if (user==USER2) return USER0; return User(user+1);}
 User last(User user) {if (user==USER0) return USER2; return User(user-1);}
@@ -404,6 +407,7 @@ struct Hand {
     }
 };
 
+const Hand EMPTY_HAND(ull(0));
 const Hand PASS_HAND(EMPTY_CARDS,PASS);
 const Hand ERROR_HAND(EMPTY_CARDS,ERRORHAND);
 
