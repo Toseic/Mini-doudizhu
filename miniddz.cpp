@@ -12,6 +12,8 @@
 #include <cmath>
 #include <unordered_map>
 #include <set>
+#include <numeric>
+
 #include "jsoncpp/json.h"
 
 using namespace std;
@@ -401,6 +403,8 @@ struct Hand {
     }
 };
 
+const double BOOM_POS = 0.8;
+const Hand EMPTY_HAND(ull(0));
 const Hand PASS_HAND(EMPTY_CARDS,PASS);
 const Hand ERROR_HAND(EMPTY_CARDS,ERRORHAND);
 
@@ -1216,10 +1220,15 @@ void State::apart_cards(vector<Hand>& actions_) {
     member_sum(actions, members);
     findAppend(append_hands, cards.mycards);
 
-    focusHand.push_back(Hand(append_hands[0].action,SINGLE));
-    focusHand[0].type_check();
-    focusHand.push_back(Hand(append_hands[2].action,PAIR));
-    focusHand[1].type_check();
+    if (append_hands[0] != PASS) {
+        focusHand.push_back(Hand(append_hands[0].action,SINGLE));
+        focusHand.back().type_check();        
+    }
+    if (append_hands[2] != PASS) {
+        focusHand.push_back(Hand(append_hands[2].action,PAIR));
+        focusHand.back().type_check();        
+    }
+
 
 
     for (vector<Hand>::iterator i=actions.begin();i!=actions.end();++i) {
@@ -1485,9 +1494,53 @@ void node_check(Node& node,User rootuser) {
 
 void node_guess(Node& node, Cards rest, vector<Hand>* history, 
     int num_last, int num_next) {
+    //把所有的action加起来
+    Hand history_user_hands = accumulate(history[node.user].begin(),history[node.user].end(),EMPTY_HAND);
+    Hand history_last_hands = accumulate(history[last(node.user)].begin(),history[last(node.user)].end(),EMPTY_HAND);
+    Hand history_next_hands = accumulate(history[next(node.user)].begin(),history[next(node.user)].end(),EMPTY_HAND);
+    vector<int>last_cards,next_cards;
+    for(Cardtype i=NINE;i<=KING;i=Cardtype(i+1)){
+        int restcardnum = numof(rest.mycards,i);
+        int usercardnum = numof(node.states[node.user].cards.mycards,i);
+        int history_user_cardnum = numof(history_user_hands.action,i);
+        int history_last_cardnum = numof(history_last_hands.action,i);
+        int history_next_cardnum = numof(history_next_hands.action,i);
+        //场上只有一个人走过了X且不是炸弹，我方无X，则未走过X的人很大概率有X(X∈9~K)
+        if(history_last_cardnum*history_next_cardnum==0&&history_user_cardnum==0&&usercardnum==0&&restcardnum>0&&restcardnum<4&&rand_int(10)/10.0<BOOM_POS){
+            if(history_last_cardnum==0){
+                last_cards.push_back(int(i));
+                num_last--;
+            }
+            else{
+                next_cards.push_back(int(i));
+                num_next--;
+            }
+            rest.remove(i,1);
+        }
+    }
+    vector<int> lord_cards = Cards::decode(node.lord_card);
+    if(last(node.user)==LORD){
+        for(int i=0;i<3;++i){
+            int lastcardnum = numof(history_last_hands.action,Cardtype(lord_cards[i]));
+            if(lastcardnum==0){
+                last_cards.push_back(lord_cards[i]);
+                rest.remove(Cardtype(lord_cards[i]),1);
+                num_last--;
+            }
+        }
+    }
+    else if(next(node.user)==LORD){
+        for(int i=0;i<3;++i){
+            int nextcardnum = numof(history_next_hands.action,Cardtype(lord_cards[i]));
+            if(int(FULL_MASK&(history_next_hands.action>>lord_cards[i]*4))==0){
+                next_cards.push_back(lord_cards[i]);
+                rest.remove(Cardtype(lord_cards[i]),1);
+                num_next--;
+            }
+        }
+    }
     vector<int> rest_cards = rest.decode();
     random_shuffle(rest_cards.begin(),rest_cards.end());
-    vector<int>last_cards,next_cards;
     last_cards.insert(last_cards.end(),rest_cards.begin(),rest_cards.begin()+num_last);
     next_cards.insert(next_cards.end(),rest_cards.end()-num_next,rest_cards.end());
     node.states[last(node.user)].cards = Cards::encode(last_cards);
@@ -1545,7 +1598,7 @@ void game() {
 	bool my_cards_bm[54] = {};
     vector<int> mycards_vector;
     int num_last, num_next;
-    cards lord_card;
+    cards lord_card = 0ull;
     cards left_cards ;
     User user;
 
@@ -1574,6 +1627,9 @@ void game() {
         for(unsigned i = 0; i < own.size(); ++ i){
             my_cards_bm[own[i].asInt()] = true;
         }
+        for (int i=0;i<3;i++) {
+            lord_card += (1ull << 4*cardTypeOf(lordcardlist[i].asInt()));
+        }
 
     }
     if (user == USER0) { num_last = 9; num_next = 9; }
@@ -1581,16 +1637,8 @@ void game() {
     else { num_last = 9; num_next = 12; }
 
     int round_size = input["responses"].size();
-    int requeat_size = input["requests"].size();
-	// 把我出过的牌从初始手牌中去掉
-	for(unsigned i = 0; i < round_size; ++ i) {
-		auto resp = input["responses"][i];
-		for(unsigned j = 0; j < resp.size(); ++ j) {
-            my_cards_bm[resp[j].asInt()] = false;
-        }
-	}  
+    int request_size = input["requests"].size();
 
-    // 我当前实际拥有的牌、待响应的上一手牌（0-53编码）
     for (int i = 0; i < 54; ++ i){
         // 如果这牌我没出过，那么加入列表
         if (my_cards_bm[i]){
@@ -1598,23 +1646,51 @@ void game() {
         }
     }
     states[user].cards.mycards = Cards::encode(mycards_vector);
-    vector<int> history_vector;
     left_cards = ALL_CARDS - states[user].cards.mycards;
-    for (int i=0;i<requeat_size;i++) {
+	// 把我出过的牌从初始手牌中去掉
+	for(unsigned i = 0; i < round_size; ++ i) {
+        vector<int> thisaction;
+		auto resp = input["responses"][i];
+		for(unsigned j = 0; j < resp.size(); ++ j) {
+            my_cards_bm[resp[j].asInt()] = false;
+            thisaction.push_back(cardTypeOf(resp[j].asInt()));
+        }
+        
+        History[user].push_back(Hand(thisaction));
+	}  
+    mycards_vector.clear();
+    for (int i = 0; i < 54; ++ i){
+        // 如果这牌我没出过，那么加入列表
+        if (my_cards_bm[i]){
+            mycards_vector.push_back(cardTypeOf(i));
+        }
+    }
+    states[user].cards.mycards = Cards::encode(mycards_vector);   
+
+    vector<int> history_vector;
+    
+    for (int i=0;i<request_size;i++) {
         auto history = input["requests"][i]["history"];
+        
         if (history[1u].size() > 0){
+            vector<int> thisaction;
             for (unsigned i = 0; i < history[1u].size(); ++ i){
                 int c = history[1u][i].asInt();
-                history_vector.push_back(cardTypeOf(i));
+                history_vector.push_back(cardTypeOf(c));
+                thisaction.push_back(cardTypeOf(c));
                 -- num_last ;
             }
+            History[last(user)].push_back(Hand(thisaction));
         } 
         if (history[0u].size() > 0){
+            vector<int> thisaction;
             for (unsigned i = 0; i < history[0u].size(); ++ i){
                 int c = history[0u][i].asInt();
-                history_vector.push_back(cardTypeOf(i));
+                history_vector.push_back(cardTypeOf(c));
+                thisaction.push_back(cardTypeOf(c));
                 -- num_next;
             }
+            History[next(user)].push_back(Hand(thisaction));
         }
     }
 
@@ -1642,7 +1718,7 @@ void game() {
         states[last(user)].last_action = encode_action;  
         states[last(user)].myaction = PASS_HAND;  
         states[user].last_action = encode_action;  
-    }  
+    } 
 
 
     Node mainnode(states[0],states[1],states[2],user,lord_card,BLIND);
