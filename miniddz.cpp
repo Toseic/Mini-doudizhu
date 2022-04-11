@@ -4,7 +4,7 @@ unordered_map<ID, Node> nodes;
 
 #define MCTSTimeLimit 1
 #define MCTSGameSize 50
-#define MCTS_v1 3
+#define MCTS_v1 6
 
 #define debug
 // #define showdetail
@@ -51,7 +51,7 @@ double Node::eval() {
     double value;
     if (!visit) return 100;
     if (!myparent.visit) return 0;
-    value = reward/visit + MCTS_v1*sqrt(log(myparent.visit)/visit +1e-5);
+    value = reward/visit + MCTS_v1*sqrt((2*log(myparent.visit))/visit +1e-5);
     return value;
 }
 
@@ -348,7 +348,7 @@ int game() {
             cout << card_name[action_vec[j]]<<" ";
         }
         cout << endl;
-        system("pause");
+        // system("pause");
         #endif
         user = next(user);
         #ifdef timecheck
