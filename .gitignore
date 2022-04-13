@@ -12,3 +12,4 @@
 check*
 *.out
 *.in
+/doc/
